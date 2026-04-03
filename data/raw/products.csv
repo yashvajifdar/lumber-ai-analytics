@@ -1,0 +1,21 @@
+product_id,name,category,cost,list_price
+P001,2x4x8 Framing Lumber,Dimensional Lumber,3.5,6.99
+P002,2x6x8 Framing Lumber,Dimensional Lumber,5.0,9.99
+P003,2x8x16 Lumber,Dimensional Lumber,9.0,16.99
+P004,4x4x8 Post,Dimensional Lumber,6.0,11.5
+P005,3/4 Plywood Sheet,Sheet Goods,18.0,32.99
+P006,1/2 OSB Sheet,Sheet Goods,9.0,17.5
+P007,LP SmartSide Panel,Siding,22.0,41.0
+P008,Cedar Decking 5/4x6,Decking,4.5,8.25
+P009,Pressure Treated 2x6x12,Treated Lumber,7.0,14.99
+P010,Pressure Treated 4x4x8,Treated Lumber,8.5,16.5
+P011,LVL Beam 3.5x9.5x20,Engineered Wood,95.0,165.0
+P012,"I-Joist 9.5"" x 16'",Engineered Wood,38.0,64.0
+P013,"Drywall 4x8 1/2""",Drywall,8.0,13.5
+P014,Cement Board 3x5,Drywall,10.0,17.0
+P015,House Wrap 9x100,Insulation,45.0,79.0
+P016,Fiberglass Batts R-19,Insulation,32.0,54.99
+P017,Roofing Nails 50lb,Fasteners,38.0,62.0
+P018,Framing Screws 5lb,Fasteners,9.0,16.5
+P019,Concrete Anchor Bolts,Fasteners,12.0,21.0
+P020,Door Pre-hung Interior,Doors & Windows,85.0,149.0

@@ -1,0 +1,201 @@
+customer_id,name,type,location,since
+C0001,ProCraft LLC,Contractor,Yard C - Hartford,2023-03-26
+C0002,AceContracting Inc,Contractor,Yard A - Providence,2023-09-19
+C0003,First Choice LLC,Contractor,Yard C - Hartford,2022-10-26
+C0004,BuildRight LLC,Contractor,Yard A - Providence,2023-05-23
+C0005,AceContracting LLC,Contractor,Yard C - Hartford,2023-06-12
+C0006,First Choice Construction,Contractor,Yard A - Providence,2022-09-29
+C0007,AllStar Co,Contractor,Yard A - Providence,2023-07-22
+C0008,Summit Build Co,Contractor,Yard B - Boston,2023-07-26
+C0009,AceContracting Co,Contractor,Yard A - Providence,2023-09-29
+C0010,Summit Build LLC,Contractor,Yard B - Boston,2023-01-14
+C0011,AllStar Co,Contractor,Yard A - Providence,2022-09-18
+C0012,First Choice LLC,Contractor,Yard B - Boston,2023-10-13
+C0013,First Choice Co,Contractor,Yard C - Hartford,2022-04-08
+C0014,Cornerstone Inc,Contractor,Yard C - Hartford,2023-10-22
+C0015,BuildRight Inc,Contractor,Yard B - Boston,2023-10-12
+C0016,AceContracting LLC,Contractor,Yard B - Boston,2023-03-23
+C0017,DuraBuild Co,Contractor,Yard A - Providence,2022-12-18
+C0018,Cornerstone Inc,Contractor,Yard C - Hartford,2023-04-03
+C0019,ProCraft Inc,Contractor,Yard C - Hartford,2023-04-26
+C0020,SunriseDev Construction,Contractor,Yard B - Boston,2023-03-31
+C0021,First Choice Inc,Contractor,Yard C - Hartford,2023-02-03
+C0022,BuildRight Inc,Contractor,Yard A - Providence,2023-02-12
+C0023,Summit Build Co,Contractor,Yard A - Providence,2023-05-30
+C0024,AllStar Co,Contractor,Yard A - Providence,2022-03-01
+C0025,DuraBuild Construction,Contractor,Yard C - Hartford,2022-09-19
+C0026,SunriseDev Co,Contractor,Yard A - Providence,2023-04-24
+C0027,First Choice Co,Contractor,Yard C - Hartford,2022-05-13
+C0028,Summit Build Construction,Contractor,Yard B - Boston,2023-05-22
+C0029,SunriseDev Construction,Contractor,Yard A - Providence,2023-11-14
+C0030,ProCraft Inc,Contractor,Yard C - Hartford,2023-07-22
+C0031,Summit Build LLC,Contractor,Yard B - Boston,2022-12-07
+C0032,AllStar Construction,Contractor,Yard C - Hartford,2023-04-19
+C0033,First Choice LLC,Contractor,Yard C - Hartford,2023-09-06
+C0034,First Choice Co,Contractor,Yard C - Hartford,2023-01-18
+C0035,ProCraft Co,Contractor,Yard B - Boston,2023-07-24
+C0036,DuraBuild LLC,Contractor,Yard C - Hartford,2023-04-07
+C0037,First Choice Inc,Contractor,Yard C - Hartford,2023-09-15
+C0038,BlueSky Build Inc,Contractor,Yard A - Providence,2022-12-15
+C0039,SunriseDev LLC,Contractor,Yard C - Hartford,2023-02-04
+C0040,DuraBuild LLC,Contractor,Yard A - Providence,2022-12-26
+C0041,BlueSky Build Inc,Contractor,Yard A - Providence,2023-04-30
+C0042,AllStar LLC,Contractor,Yard A - Providence,2022-08-22
+C0043,ProCraft Inc,Contractor,Yard A - Providence,2022-02-25
+C0044,DuraBuild Inc,Contractor,Yard B - Boston,2022-07-10
+C0045,AllStar Construction,Contractor,Yard A - Providence,2022-06-28
+C0046,AceContracting Co,Contractor,Yard B - Boston,2022-02-13
+C0047,Cornerstone Construction,Contractor,Yard C - Hartford,2022-09-26
+C0048,ProCraft Inc,Contractor,Yard A - Providence,2023-10-28
+C0049,Cornerstone LLC,Contractor,Yard C - Hartford,2022-06-13
+C0050,AceContracting Inc,Contractor,Yard A - Providence,2023-10-21
+C0051,BuildRight Inc,Contractor,Yard A - Providence,2023-11-30
+C0052,Cornerstone LLC,Contractor,Yard C - Hartford,2023-05-03
+C0053,BlueSky Build Construction,Contractor,Yard A - Providence,2022-06-28
+C0054,SunriseDev Construction,Contractor,Yard A - Providence,2022-09-04
+C0055,Summit Build Inc,Contractor,Yard A - Providence,2023-09-24
+C0056,Summit Build Co,Contractor,Yard B - Boston,2022-11-07
+C0057,DuraBuild LLC,Contractor,Yard C - Hartford,2022-03-03
+C0058,ProCraft LLC,Contractor,Yard B - Boston,2023-01-19
+C0059,ProCraft Inc,Contractor,Yard A - Providence,2023-06-21
+C0060,First Choice Construction,Contractor,Yard A - Providence,2022-10-26
+C0061,SunriseDev Co,Contractor,Yard B - Boston,2023-04-21
+C0062,ProCraft Construction,Contractor,Yard C - Hartford,2023-09-23
+C0063,BuildRight LLC,Contractor,Yard A - Providence,2023-05-04
+C0064,SunriseDev Construction,Contractor,Yard B - Boston,2022-08-27
+C0065,AceContracting Construction,Contractor,Yard A - Providence,2023-07-17
+C0066,Summit Build LLC,Contractor,Yard B - Boston,2023-04-05
+C0067,DuraBuild Co,Contractor,Yard B - Boston,2022-01-18
+C0068,First Choice Construction,Contractor,Yard A - Providence,2023-06-21
+C0069,BlueSky Build Inc,Contractor,Yard A - Providence,2022-05-18
+C0070,First Choice LLC,Contractor,Yard C - Hartford,2023-02-14
+C0071,BuildRight LLC,Contractor,Yard C - Hartford,2022-08-31
+C0072,First Choice Inc,Contractor,Yard A - Providence,2022-07-30
+C0073,ProCraft Inc,Contractor,Yard A - Providence,2022-05-02
+C0074,ProCraft Inc,Contractor,Yard B - Boston,2023-09-01
+C0075,AllStar Inc,Contractor,Yard C - Hartford,2022-05-03
+C0076,BuildRight LLC,Contractor,Yard B - Boston,2022-02-27
+C0077,AllStar Co,Contractor,Yard B - Boston,2023-06-06
+C0078,Cornerstone Inc,Contractor,Yard B - Boston,2022-11-22
+C0079,SunriseDev Co,Contractor,Yard B - Boston,2023-02-12
+C0080,ProCraft LLC,Contractor,Yard B - Boston,2022-04-05
+C0081,AllStar LLC,Contractor,Yard A - Providence,2022-06-30
+C0082,AceContracting Co,Contractor,Yard A - Providence,2023-01-09
+C0083,ProCraft Inc,Contractor,Yard B - Boston,2023-03-16
+C0084,SunriseDev Construction,Contractor,Yard C - Hartford,2022-01-11
+C0085,BlueSky Build LLC,Contractor,Yard C - Hartford,2022-06-13
+C0086,BlueSky Build LLC,Contractor,Yard A - Providence,2023-04-06
+C0087,ProCraft LLC,Contractor,Yard C - Hartford,2022-06-14
+C0088,SunriseDev Co,Contractor,Yard B - Boston,2022-04-22
+C0089,AceContracting Co,Contractor,Yard A - Providence,2022-01-28
+C0090,BlueSky Build Construction,Contractor,Yard B - Boston,2023-11-10
+C0091,ProCraft Construction,Contractor,Yard B - Boston,2023-11-17
+C0092,BuildRight Co,Contractor,Yard A - Providence,2022-03-20
+C0093,BlueSky Build Inc,Contractor,Yard C - Hartford,2022-10-06
+C0094,First Choice Construction,Contractor,Yard C - Hartford,2023-12-23
+C0095,ProCraft LLC,Contractor,Yard C - Hartford,2023-08-02
+C0096,First Choice LLC,Contractor,Yard B - Boston,2022-05-15
+C0097,First Choice Inc,Contractor,Yard B - Boston,2023-08-24
+C0098,BuildRight Co,Contractor,Yard B - Boston,2023-11-22
+C0099,Cornerstone Inc,Contractor,Yard C - Hartford,2023-04-21
+C0100,ProCraft Co,Contractor,Yard C - Hartford,2022-11-11
+C0101,AllStar Inc,Contractor,Yard A - Providence,2023-07-19
+C0102,SunriseDev Construction,Contractor,Yard A - Providence,2023-07-02
+C0103,Cornerstone Construction,Contractor,Yard C - Hartford,2023-04-22
+C0104,BlueSky Build Inc,Contractor,Yard C - Hartford,2023-09-13
+C0105,Summit Build LLC,Contractor,Yard B - Boston,2023-05-19
+C0106,AceContracting Construction,Contractor,Yard B - Boston,2023-02-23
+C0107,AceContracting Inc,Contractor,Yard A - Providence,2022-02-25
+C0108,AceContracting Construction,Contractor,Yard B - Boston,2023-03-22
+C0109,ProCraft Co,Contractor,Yard B - Boston,2022-03-16
+C0110,First Choice Construction,Contractor,Yard C - Hartford,2022-07-01
+C0111,Cornerstone LLC,Contractor,Yard A - Providence,2023-04-09
+C0112,SunriseDev Co,Contractor,Yard A - Providence,2023-09-12
+C0113,AllStar Construction,Contractor,Yard B - Boston,2023-02-14
+C0114,Summit Build LLC,Contractor,Yard B - Boston,2022-05-21
+C0115,AceContracting Co,Contractor,Yard A - Providence,2022-01-06
+C0116,Summit Build LLC,Contractor,Yard C - Hartford,2022-06-29
+C0117,AceContracting Co,Contractor,Yard B - Boston,2023-10-22
+C0118,Cornerstone Co,Contractor,Yard C - Hartford,2023-08-27
+C0119,BlueSky Build Co,Contractor,Yard C - Hartford,2022-11-09
+C0120,Cornerstone Construction,Contractor,Yard C - Hartford,2023-03-05
+C0121,Rachel Jones,Retail,Yard A - Providence,2022-10-28
+C0122,Frank Garcia,Retail,Yard C - Hartford,2022-05-29
+C0123,Beth Thomas,Retail,Yard C - Hartford,2024-01-01
+C0124,Beth Wilson,Retail,Yard A - Providence,2022-10-18
+C0125,Paul Perez,Retail,Yard C - Hartford,2023-02-06
+C0126,Scott Jackson,Retail,Yard B - Boston,2022-02-09
+C0127,David Harris,Retail,Yard B - Boston,2023-07-12
+C0128,Kevin Wilson,Retail,Yard C - Hartford,2022-02-21
+C0129,Amy Anderson,Retail,Yard A - Providence,2023-05-06
+C0130,Beth Davis,Retail,Yard A - Providence,2023-08-04
+C0131,James Johnson,Retail,Yard A - Providence,2022-09-02
+C0132,Amy Williams,Retail,Yard B - Boston,2022-11-03
+C0133,Paul Miller,Retail,Yard C - Hartford,2022-01-18
+C0134,Frank White,Retail,Yard B - Boston,2023-04-27
+C0135,Robert Smith,Retail,Yard A - Providence,2022-10-23
+C0136,Nancy Garcia,Retail,Yard C - Hartford,2022-07-20
+C0137,Scott Johnson,Retail,Yard C - Hartford,2023-04-21
+C0138,Susan Jackson,Retail,Yard A - Providence,2022-09-13
+C0139,Mike Martin,Retail,Yard C - Hartford,2023-02-11
+C0140,Scott Perez,Retail,Yard C - Hartford,2022-08-03
+C0141,Diana Martin,Retail,Yard B - Boston,2023-07-23
+C0142,Helen Jackson,Retail,Yard B - Boston,2023-04-23
+C0143,Carlos Harris,Retail,Yard B - Boston,2022-03-31
+C0144,Nancy Martinez,Retail,Yard B - Boston,2023-10-14
+C0145,Beth Davis,Retail,Yard B - Boston,2023-01-23
+C0146,Tom Martin,Retail,Yard A - Providence,2023-08-13
+C0147,Robert Davis,Retail,Yard B - Boston,2022-01-21
+C0148,Robert Miller,Retail,Yard A - Providence,2022-11-03
+C0149,Diana Anderson,Retail,Yard C - Hartford,2022-09-11
+C0150,Diana Johnson,Retail,Yard A - Providence,2022-10-28
+C0151,Frank Lee,Retail,Yard C - Hartford,2023-12-12
+C0152,Paul Thomas,Retail,Yard B - Boston,2023-12-26
+C0153,Angela Wilson,Retail,Yard B - Boston,2022-10-29
+C0154,Rachel Martin,Retail,Yard C - Hartford,2023-05-21
+C0155,Helen Davis,Retail,Yard B - Boston,2022-10-12
+C0156,Helen Smith,Retail,Yard B - Boston,2023-01-22
+C0157,Frank Garcia,Retail,Yard B - Boston,2023-08-24
+C0158,Amy Martin,Retail,Yard A - Providence,2022-11-24
+C0159,Paul Lee,Retail,Yard C - Hartford,2023-12-05
+C0160,Kevin Moore,Retail,Yard A - Providence,2022-09-16
+C0161,Lisa Johnson,Retail,Yard B - Boston,2022-12-09
+C0162,Tom Miller,Retail,Yard B - Boston,2023-02-01
+C0163,Tom Thomas,Retail,Yard B - Boston,2022-10-27
+C0164,Carlos Williams,Retail,Yard B - Boston,2023-12-13
+C0165,Rachel Johnson,Retail,Yard B - Boston,2023-05-17
+C0166,Kevin Johnson,Retail,Yard A - Providence,2023-04-23
+C0167,David Smith,Retail,Yard C - Hartford,2023-07-29
+C0168,Nancy Jones,Retail,Yard B - Boston,2022-02-15
+C0169,Susan Lee,Retail,Yard A - Providence,2022-09-12
+C0170,Carlos Taylor,Retail,Yard A - Providence,2022-04-21
+C0171,Amy Brown,Retail,Yard A - Providence,2023-02-17
+C0172,Susan Lee,Retail,Yard A - Providence,2023-02-16
+C0173,Paul Thomas,Retail,Yard B - Boston,2023-06-12
+C0174,Kevin Lee,Retail,Yard C - Hartford,2022-03-30
+C0175,Nancy Brown,Retail,Yard C - Hartford,2023-02-27
+C0176,Amy Brown,Retail,Yard C - Hartford,2023-11-20
+C0177,Angela Martin,Retail,Yard B - Boston,2022-02-23
+C0178,Angela Williams,Retail,Yard C - Hartford,2022-03-09
+C0179,Tom Smith,Retail,Yard B - Boston,2022-08-18
+C0180,Susan Moore,Retail,Yard B - Boston,2022-03-22
+C0181,Scott Jones,Retail,Yard B - Boston,2023-07-05
+C0182,Mike Martinez,Retail,Yard C - Hartford,2022-06-29
+C0183,Helen Jackson,Retail,Yard B - Boston,2022-05-05
+C0184,Carlos Anderson,Retail,Yard A - Providence,2023-10-05
+C0185,Carlos Jackson,Retail,Yard A - Providence,2022-09-13
+C0186,Paul Perez,Retail,Yard C - Hartford,2022-12-09
+C0187,Tom Smith,Retail,Yard B - Boston,2023-02-03
+C0188,Lisa White,Retail,Yard A - Providence,2023-01-03
+C0189,Carlos Anderson,Retail,Yard B - Boston,2022-05-01
+C0190,Carlos Martin,Retail,Yard A - Providence,2022-07-21
+C0191,David Williams,Retail,Yard A - Providence,2022-11-11
+C0192,Helen Martin,Retail,Yard A - Providence,2022-01-24
+C0193,Helen White,Retail,Yard B - Boston,2023-12-15
+C0194,Kevin Wilson,Retail,Yard A - Providence,2022-11-13
+C0195,Nancy Wilson,Retail,Yard C - Hartford,2022-05-16
+C0196,Angela White,Retail,Yard C - Hartford,2022-07-07
+C0197,Angela Moore,Retail,Yard C - Hartford,2022-06-17
+C0198,Tom Taylor,Retail,Yard C - Hartford,2022-09-24
+C0199,Carlos Wilson,Retail,Yard B - Boston,2023-05-10
+C0200,Susan Miller,Retail,Yard B - Boston,2023-09-01

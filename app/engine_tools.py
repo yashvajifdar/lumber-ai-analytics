@@ -1,0 +1,383 @@
+"""
+Provider-agnostic engine building blocks.
+
+Everything in this file is shared across all AI providers:
+  - TOOL_DEFINITIONS    neutral JSON Schema format (not Anthropic, not Gemini)
+  - CHART_SPECS         chart rendering specs keyed by tool name
+  - KPI_DISPATCH        tool name → KPI function mapping
+  - ChatResult          return type contract for all engines
+  - SYSTEM_PROMPT       business context prompt (provider-independent)
+  - df_to_context()     DataFrame → string for LLM context window
+
+Each provider adapter (anthropic_engine.py, gemini_engine.py) imports from here
+and converts TOOL_DEFINITIONS to its own format. Adding a new provider means
+creating one new file — nothing here changes.
+
+Tool definition format (neutral):
+  {
+    "name":        str,
+    "description": str,
+    "parameters":  JSON Schema object  ← standard, not Anthropic input_schema
+  }
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+import pandas as pd
+
+from metrics import kpis
+
+# ── system prompt ─────────────────────────────────────────────────────────────
+
+SYSTEM_PROMPT = """You are an AI analytics assistant for a lumber and building supply business
+with multiple yard locations. You help owners and managers understand their business performance.
+
+You have access to tools that query real business data. Always call a tool before responding.
+
+When answering:
+- Interpret the data — find patterns, trends, and anomalies, not just describe the numbers
+- Be specific: exact figures, percentages, time periods, product names
+- Highlight what is notable or actionable
+- Format currency as $X.XK or $X.XM for large numbers
+- Keep responses to 2–4 short paragraphs
+
+You are talking to a business owner who wants clear, actionable insights.
+Never fabricate numbers. Only reference data returned by the tools."""
+
+# ── neutral tool definitions (JSON Schema) ────────────────────────────────────
+# Standard JSON Schema under "parameters" — no provider-specific keys.
+# Each engine adapter converts this to its own wire format.
+
+TOOL_DEFINITIONS: list[dict[str, Any]] = [
+    {
+        "name": "get_revenue_over_time",
+        "description": (
+            "Revenue, COGS, gross profit, margin, and order count over time. "
+            "Use for questions about sales performance, revenue trends, financial overview, "
+            "or how the business is doing overall."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["day", "week", "month"],
+                    "description": "Aggregation period. Default: month.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_margin_trend",
+        "description": (
+            "Gross margin percentage trend over time alongside revenue and gross profit. "
+            "Use for questions specifically about margin, profitability trends, or why profit changed."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["day", "week", "month"],
+                    "description": "Aggregation period. Default: month.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_top_products",
+        "description": (
+            "Top N products ranked by revenue, gross profit, quantity sold, or margin percentage. "
+            "Use for questions about best-performing products, top SKUs, highest margin products, "
+            "or what's selling most."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer",
+                    "description": "Number of products to return. Default: 10.",
+                },
+                "by": {
+                    "type": "string",
+                    "enum": ["revenue", "gross_profit", "quantity", "margin_pct"],
+                    "description": "Sort metric. Default: revenue. Use margin_pct for highest margin products.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_bottom_margin_products",
+        "description": (
+            "Products with the lowest gross margin percentage (minimum $5K revenue). "
+            "Use for questions about worst-margin products, margin compression, or pricing issues."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer",
+                    "description": "Number of products to return. Default: 10.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_revenue_by_category",
+        "description": (
+            "Revenue, gross profit, and margin broken down by product category. "
+            "Use for questions about category performance or product mix."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_top_customers",
+        "description": (
+            "Top N customers ranked by revenue, with their type, gross profit, and order count. "
+            "Use for questions about best customers, key accounts, or customer value."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer",
+                    "description": "Number of customers to return. Default: 10.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_customer_type_split",
+        "description": (
+            "Revenue, customer count, and order count split between Contractor and Retail customers. "
+            "Use for questions about customer mix or contractor vs. retail breakdown."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_repeat_customer_rate",
+        "description": (
+            "Repeat purchase rate by customer type — percentage of customers with more than one order. "
+            "Use for questions about customer loyalty, retention, or repeat business."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_revenue_by_location",
+        "description": (
+            "Revenue, gross profit, and margin broken down by yard location over time. "
+            "Use for questions about location performance or comparing yards."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["month", "week", "total"],
+                    "description": "Aggregation period. Default: month.",
+                },
+            },
+        },
+    },
+    {
+        "name": "get_inventory_health",
+        "description": (
+            "Current inventory levels by product and location, items below reorder point, "
+            "and total inventory value. Use for questions about stock levels or what needs reordering."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "get_slow_moving_inventory",
+        "description": (
+            "Products with high stock but low sales velocity in the last 90 days. "
+            "Use for questions about dead stock, slow movers, or inventory that isn't selling."
+        ),
+        "parameters": {"type": "object", "properties": {}},
+    },
+]
+
+# ── chart specs (keyed by tool name) ─────────────────────────────────────────
+
+CHART_SPECS: dict[str, dict[str, Any]] = {
+    "get_revenue_over_time": {
+        "type": "bar",
+        "x": "period", "y": "revenue",
+        "color_seq": ["#2563EB"],
+        "labels": {"period": "", "revenue": "Revenue ($)"},
+    },
+    "get_margin_trend": {
+        "type": "line",
+        "x": "period", "y": "margin_pct",
+        "color_seq": ["#16A34A"],
+        "labels": {"period": "", "margin_pct": "Margin %"},
+    },
+    "get_top_products": {
+        "type": "horizontal_bar",
+        "x": "revenue", "y": "name",
+        "color_col": "margin_pct", "color_scale": "RdYlGn",
+        "labels": {"name": "", "revenue": "Revenue ($)", "margin_pct": "Margin %"},
+    },
+    "get_bottom_margin_products": {
+        "type": "horizontal_bar",
+        "x": "margin_pct", "y": "name",
+        "color_col": "margin_pct", "color_scale": "RdYlGn",
+        "labels": {"name": "", "margin_pct": "Margin %"},
+    },
+    "get_revenue_by_category": {
+        "type": "pie",
+        "names": "category", "values": "revenue",
+    },
+    "get_top_customers": {
+        "type": "horizontal_bar",
+        "x": "revenue", "y": "customer_id",
+        "color_col": "type",
+        "color_map": {"Contractor": "#2563EB", "Retail": "#F59E0B"},
+        "labels": {"customer_id": "", "revenue": "Revenue ($)"},
+    },
+    "get_customer_type_split": {
+        "type": "pie",
+        "names": "type", "values": "revenue",
+        "color_map": {"Contractor": "#2563EB", "Retail": "#F59E0B"},
+    },
+    "get_repeat_customer_rate": {
+        "type": "bar",
+        "x": "type", "y": "repeat_rate_pct",
+        "color_seq": ["#7C3AED"],
+        "labels": {"type": "Customer Type", "repeat_rate_pct": "Repeat Rate (%)"},
+    },
+    "get_revenue_by_location": {
+        "type": "line_multi",
+        "x": "period", "y": "revenue", "color_col": "location",
+        "labels": {"period": "", "revenue": "Revenue ($)"},
+    },
+    "get_inventory_health": {
+        "type": "table",
+        "columns": ["name", "category", "location",
+                    "stock_level", "reorder_point", "below_reorder", "inventory_value"],
+    },
+    "get_slow_moving_inventory": {
+        "type": "scatter",
+        "x": "units_sold_90d", "y": "total_stock",
+        "size": "inventory_value", "color_col": "category", "hover": "name",
+        "labels": {"units_sold_90d": "Units Sold (90d)", "total_stock": "Stock Level"},
+    },
+}
+
+# ── KPI dispatch (tool name → function) ──────────────────────────────────────
+
+KPI_DISPATCH: dict[str, Any] = {
+    "get_revenue_over_time":      kpis.revenue_over_time,
+    "get_margin_trend":           kpis.margin_trend,
+    "get_top_products":           kpis.top_products,
+    "get_bottom_margin_products": kpis.bottom_margin_products,
+    "get_revenue_by_category":    kpis.revenue_by_category,
+    "get_top_customers":          kpis.top_customers,
+    "get_customer_type_split":    kpis.customer_type_split,
+    "get_repeat_customer_rate":   kpis.repeat_customer_rate,
+    "get_revenue_by_location":    kpis.revenue_by_location,
+    "get_inventory_health":       kpis.inventory_health,
+    "get_slow_moving_inventory":  kpis.slow_moving_inventory,
+}
+
+# ── curated follow-up suggestions (keyed by tool name) ───────────────────────
+# Only questions that map to real KPI functions are included.
+
+FOLLOW_UP_SUGGESTIONS: dict[str, list[str]] = {
+    "get_revenue_over_time": [
+        "How has our margin trended over the same period?",
+        "Which location drives the most revenue?",
+        "Which products are generating the most revenue?",
+    ],
+    "get_margin_trend": [
+        "Which products have the lowest margin?",
+        "What were our total sales this year?",
+        "Which category has the best margin?",
+    ],
+    "get_top_products": [
+        "Which products have the lowest margin?",
+        "What does revenue by category look like?",
+        "How has overall revenue trended over time?",
+    ],
+    "get_bottom_margin_products": [
+        "Which products generate the most revenue?",
+        "How has margin trended over time?",
+        "What does revenue by category look like?",
+    ],
+    "get_revenue_by_category": [
+        "Which products have the highest margin?",
+        "Which products have the lowest margin?",
+        "What were total sales this year?",
+    ],
+    "get_top_customers": [
+        "What is the split between contractor and retail revenue?",
+        "What is our repeat customer rate?",
+        "Which products are our best customers buying?",
+    ],
+    "get_customer_type_split": [
+        "Who are our top customers by revenue?",
+        "What is our repeat customer rate?",
+        "How has revenue trended over time?",
+    ],
+    "get_repeat_customer_rate": [
+        "Who are our top customers by revenue?",
+        "What is the contractor vs retail revenue split?",
+        "What were total sales this year?",
+    ],
+    "get_revenue_by_location": [
+        "What were total sales this year?",
+        "How has margin trended over time?",
+        "Who are our top customers by revenue?",
+    ],
+    "get_inventory_health": [
+        "Which inventory is slow-moving?",
+        "What were total sales this year?",
+        "Which products have the lowest margin?",
+    ],
+    "get_slow_moving_inventory": [
+        "What is our current inventory health?",
+        "Which products generate the most revenue?",
+        "What were total sales this year?",
+    ],
+}
+
+# ── shared return type ────────────────────────────────────────────────────────
+
+@dataclass
+class ChatResult:
+    """
+    Common return contract for all engine implementations.
+    The UI layer only ever sees this — never a provider SDK type.
+    """
+    text: str
+    df: pd.DataFrame | None = None
+    chart_spec: dict[str, Any] | None = None
+    kpi_called: str | None = None
+    error: str | None = None
+    follow_ups: list[str] = field(default_factory=list)
+
+
+# ── shared helper ─────────────────────────────────────────────────────────────
+
+def df_to_context(df: pd.DataFrame, max_rows: int = 25) -> str:
+    """
+    Serialize a DataFrame to a compact string for the LLM context window.
+    Sends the data rows plus a summary of key numeric columns.
+    """
+    rows = df.head(max_rows)
+    table = rows.to_string(index=False)
+
+    numeric_cols = df.select_dtypes(include="number").columns.tolist()
+    if numeric_cols:
+        parts = []
+        for col in numeric_cols[:4]:
+            parts.append(f"{col}: total={df[col].sum():,.2f}, avg={df[col].mean():,.2f}")
+        summary = "Summary: " + " | ".join(parts)
+    else:
+        summary = ""
+
+    note = f"\n(showing {len(rows)} of {len(df)} rows)" if len(df) > max_rows else ""
+    return f"{table}{note}\n\n{summary}".strip()
