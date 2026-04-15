@@ -18,6 +18,12 @@ from __future__ import annotations
 
 import os
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from app.engine_tools import ChatResult  # re-exported for callers that need the type
 
 
@@ -39,12 +45,6 @@ def build_engine():
     Load keys from st.secrets (Streamlit Cloud) or .env (local) and return
     the right engine. Returns None if the required key is not configured.
     """
-    try:
-        from dotenv import load_dotenv
-        load_dotenv()
-    except ImportError:
-        pass
-
     provider = _get_secret("AI_PROVIDER", os.environ.get("AI_PROVIDER", "anthropic")).lower()
 
     if provider == "gemini":
