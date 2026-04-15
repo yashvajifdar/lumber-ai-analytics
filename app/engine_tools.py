@@ -286,61 +286,62 @@ KPI_DISPATCH: dict[str, Any] = {
 # ── curated follow-up suggestions (keyed by tool name) ───────────────────────
 # Only questions that map to real KPI functions are included.
 
-FOLLOW_UP_SUGGESTIONS: dict[str, list[str]] = {
+# Each entry is (short_label, full_question). The UI shows the label; the engine receives the question.
+FOLLOW_UP_SUGGESTIONS: dict[str, list[tuple[str, str]]] = {
     "get_revenue_over_time": [
-        "How has our margin trended over the same period?",
-        "Which location drives the most revenue?",
-        "Which products are generating the most revenue?",
+        ("📉 Margin trend",        "How has our margin trended over the same period?"),
+        ("🏪 By location",         "Which location drives the most revenue?"),
+        ("📦 Top products",        "Which products are generating the most revenue?"),
     ],
     "get_margin_trend": [
-        "Which products have the lowest margin?",
-        "What were our total sales this year?",
-        "Which category has the best margin?",
+        ("📉 Lowest margins",      "Which products have the lowest margin?"),
+        ("💰 Total sales",         "What were our total sales this year?"),
+        ("🗂️ Best category",       "Which category has the best margin?"),
     ],
     "get_top_products": [
-        "Which products have the lowest margin?",
-        "What does revenue by category look like?",
-        "How has overall revenue trended over time?",
+        ("📉 Lowest margins",      "Which products have the lowest margin?"),
+        ("🗂️ By category",         "What does revenue by category look like?"),
+        ("📈 Revenue trend",       "How has overall revenue trended over time?"),
     ],
     "get_bottom_margin_products": [
-        "Which products generate the most revenue?",
-        "How has margin trended over time?",
-        "What does revenue by category look like?",
+        ("💰 Top revenue",         "Which products generate the most revenue?"),
+        ("📈 Margin over time",    "How has margin trended over time?"),
+        ("🗂️ By category",         "What does revenue by category look like?"),
     ],
     "get_revenue_by_category": [
-        "Which products have the highest margin?",
-        "Which products have the lowest margin?",
-        "What were total sales this year?",
+        ("📈 Highest margins",     "Which products have the highest margin?"),
+        ("📉 Lowest margins",      "Which products have the lowest margin?"),
+        ("💰 Total sales",         "What were total sales this year?"),
     ],
     "get_top_customers": [
-        "What is the split between contractor and retail revenue?",
-        "What is our repeat customer rate?",
-        "Which products are our best customers buying?",
+        ("👷 Contractor vs retail", "What is the split between contractor and retail revenue?"),
+        ("🔄 Repeat rate",          "What is our repeat customer rate?"),
+        ("💰 Total sales",          "What were total sales this year?"),
     ],
     "get_customer_type_split": [
-        "Who are our top customers by revenue?",
-        "What is our repeat customer rate?",
-        "How has revenue trended over time?",
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
+        ("🔄 Repeat rate",         "What is our repeat customer rate?"),
+        ("📈 Revenue trend",       "How has revenue trended over time?"),
     ],
     "get_repeat_customer_rate": [
-        "Who are our top customers by revenue?",
-        "What is the contractor vs retail revenue split?",
-        "What were total sales this year?",
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
+        ("👷 Contractor split",    "What is the contractor vs retail revenue split?"),
+        ("💰 Total sales",         "What were total sales this year?"),
     ],
     "get_revenue_by_location": [
-        "What were total sales this year?",
-        "How has margin trended over time?",
-        "Who are our top customers by revenue?",
+        ("💰 Total sales",         "What were total sales this year?"),
+        ("📉 Margin trend",        "How has margin trended over time?"),
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
     ],
     "get_inventory_health": [
-        "Which inventory is slow-moving?",
-        "What were total sales this year?",
-        "Which products have the lowest margin?",
+        ("🐌 Slow-moving stock",   "Which inventory is slow-moving?"),
+        ("💰 Total sales",         "What were total sales this year?"),
+        ("📉 Lowest margins",      "Which products have the lowest margin?"),
     ],
     "get_slow_moving_inventory": [
-        "What is our current inventory health?",
-        "Which products generate the most revenue?",
-        "What were total sales this year?",
+        ("📦 Inventory health",    "What is our current inventory health?"),
+        ("💰 Top revenue",         "Which products generate the most revenue?"),
+        ("💰 Total sales",         "What were total sales this year?"),
     ],
 }
 
@@ -357,7 +358,7 @@ class ChatResult:
     chart_spec: dict[str, Any] | None = None
     kpi_called: str | None = None
     error: str | None = None
-    follow_ups: list[str] = field(default_factory=list)
+    follow_ups: list[tuple[str, str]] = field(default_factory=list)
 
 
 # ── shared helper ─────────────────────────────────────────────────────────────

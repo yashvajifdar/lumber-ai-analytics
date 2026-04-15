@@ -146,9 +146,9 @@ if last_follow_ups:
     <p style='color:#9ca3af; font-size:12px; margin: 16px 0 6px;'>You might also ask</p>
     """, unsafe_allow_html=True)
     fu_cols = st.columns(len(last_follow_ups))
-    for i, q in enumerate(last_follow_ups):
-        if fu_cols[i].button(f"→  {q}", key=f"fu_{i}"):
-            st.session_state["prefill"] = q
+    for i, (label, question) in enumerate(last_follow_ups):
+        if fu_cols[i].button(label, key=f"fu_{i}"):
+            st.session_state["prefill"] = question
 
 question = st.chat_input("Ask about your business...")
 
