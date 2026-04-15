@@ -146,7 +146,9 @@ if last_follow_ups:
     <p style='color:#9ca3af; font-size:12px; margin: 16px 0 6px;'>You might also ask</p>
     """, unsafe_allow_html=True)
     fu_cols = st.columns(len(last_follow_ups))
-    for i, (label, question) in enumerate(last_follow_ups):
+    for i, item in enumerate(last_follow_ups):
+        # Guard against stale session state that stored plain strings (old format)
+        label, question = item if isinstance(item, tuple) else (item, item)
         if fu_cols[i].button(label, key=f"fu_{i}"):
             st.session_state["prefill"] = question
 
