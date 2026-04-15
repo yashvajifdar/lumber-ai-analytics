@@ -84,50 +84,26 @@ python3 -m streamlit run app/main.py
 > any command. All dependencies are installed inside the venv, not system-wide.
 > If you see `ModuleNotFoundError`, the venv is not active.
 
-Open **http://localhost:8501** in your browser. The app has 5 pages in the left sidebar.
+Open **http://localhost:8501** in your browser.
 
 ---
 
-## App Pages & Demo Flow
+## Demo Flow
 
-### Sidebar navigation
-| Page | What it shows |
-|------|--------------|
-| **Dashboard** | Revenue and margin trends over time, location comparison. Use the period selector (day / week / month) at the top. |
-| **Products** | Top products by revenue, lowest margin products, revenue by category |
-| **Customers** | Contractor vs retail split, repeat purchase rate, top accounts |
-| **Inventory** | Items below reorder point, slow-moving stock scatter plot |
-| **Chat** | AI-powered natural language interface — type any business question |
+The app opens directly to the chat interface. Ask business questions in plain English:
 
-### Demo script (recommended order for a client walkthrough)
-
-**1. Start on Dashboard**
-- Change the period to "week" to show week-over-week trends
-- Point out the margin % line — it tells a story about cost pressure
-
-**2. Go to Products**
-- Show the horizontal bar chart — color-coded by margin
-- Point out the lowest-margin products section — this is where money is leaking
-
-**3. Go to Customers**
-- Show the contractor vs retail revenue split
-- Highlight the repeat customer rate — contractors are sticky, retail is not
-
-**4. Go to Inventory**
-- Show items flagged below reorder point
-- Show the slow-moving scatter — high stock, low sales = cash tied up
-
-**5. Finish on Chat — this is the wow moment**
-Ask these questions in order:
-```
+```text
 "What were total sales this year?"
 "Which products have the highest margin?"
 "Why did margin drop?"
 "Which customers spend the most?"
 "What inventory is running low?"
 ```
+
 Each question returns a natural language answer with a supporting chart.
 The AI never makes up numbers — it queries the real data every time.
+
+Suggestion buttons are shown on first load. Follow-up prompts appear after each answer.
 
 ---
 
