@@ -33,14 +33,28 @@ from app.engine_factory import build_engine  # noqa: E402  (after sys.path fix)
 from app.engine_tools import ChatResult  # noqa: E402
 
 
-# ── startup: build engine once ────────────────────────────────────────────────
+# ── startup: seed database if missing, then build engine ─────────────────────
 
 _engine = None
+
+_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "lumber.db")
+
+
+def _ensure_database() -> None:
+    """Run ETL if the database doesn't exist. Handles Render deploys where the
+    build step may not have run the ETL scripts."""
+    if os.path.exists(_DB_PATH):
+        return
+    import subprocess
+    root = os.path.dirname(os.path.dirname(__file__))
+    subprocess.run(["python", "etl/generate_data.py"], cwd=root, check=True)
+    subprocess.run(["python", "etl/loader.py"], cwd=root, check=True)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine
+    _ensure_database()
     _engine = build_engine()
     if _engine is None:
         raise RuntimeError(
