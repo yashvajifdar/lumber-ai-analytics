@@ -74,7 +74,9 @@ embedded in the personal brand site with consistent design.
 - [x] Personal website chat page (`yashvajifdar.com/demos/lumber`)
 - [x] Next.js API proxy hiding backend URL from browser
 - [x] GitHub repo: github.com/yashvajifdar/lumber-ai-analytics
-- [ ] Deploy FastAPI backend to Render (free, auto-sleeps) — **next action**
+- [x] Deploy FastAPI backend to Render (free, auto-sleeps)
+- [x] Structured logging + user-friendly error messages
+- [ ] Chart rendering in Next.js demo (Recharts — bar, line, pie, horizontal bar) — **next action**
 - [ ] Record 3-minute demo video (walk through chat with real questions)
 
 ### M2 — Pilot client (target: Q2 2026)
@@ -105,8 +107,9 @@ embedded in the personal brand site with consistent design.
 
 | Task | Est. | Notes |
 | --- | --- | --- |
-| Deploy FastAPI to Render | 1h | See `docs/runbook.md` section 9 |
-| Set `LUMBER_API_URL` in Vercel | 15m | Vercel → personal-website → Settings → Env vars |
+| ~~Deploy FastAPI to Render~~ | ~~1h~~ | Done |
+| ~~Set `LUMBER_API_URL` in Vercel~~ | ~~15m~~ | Done |
+| Chart rendering in Next.js (Recharts) | 2–3h | Install Recharts, build `Chart` component, wire to `chart_spec.type` — bar, line, pie, horizontal bar, table fallback |
 | Record demo video | 1h | Screen + voiceover, 3 min max |
 | Add Streamlit Cloud deploy | 1h | Secondary path for Python-native demo |
 
