@@ -5,7 +5,8 @@ Ingests operational data, computes trusted business metrics, and lets owners ask
 in plain English via an AI-powered chat interface.
 
 Built as a consulting portfolio piece demonstrating production-grade data engineering,
-analytics architecture, and AI integration.
+analytics architecture, and AI integration. The live chat demo runs at
+**[yashvajifdar.com/demos/lumber](https://yashvajifdar.com/demos/lumber)**.
 
 ---
 
@@ -18,7 +19,7 @@ Business owners and managers connect their operational data and ask questions li
 - *"Which contractor accounts are underperforming?"*
 - *"What inventory needs reordering this week?"*
 
-The platform returns natural language answers with supporting charts — no SQL, no dashboards
+The platform returns natural language answers with supporting data — no SQL, no dashboards
 to learn, no analyst required.
 
 ---
@@ -37,23 +38,28 @@ SQLite Warehouse  (data/lumber.db)
     ▼
 Metrics Layer  (metrics/kpis.py)
     │  11 trusted KPI functions — the only path to data
-    ▼
-    ├──▶ Dashboard  (Streamlit pages: revenue, products, customers, inventory)
     │
-    └──▶ AI Chat Engine  (app/anthropic_engine.py / app/gemini_engine.py)
-              │  LLM selects tool → KPI function executes → LLM explains result
-              ▼
-         Chart Builder  (app/chart_builder.py)
-              │  df + spec → Plotly figure
-              ▼
-         Streamlit Chat UI
+    ├──▶ Streamlit App  (app/main.py)
+    │       │  chat UI with suggestion cards, follow-up chips
+    │       ▼
+    │    AI Engine  (app/anthropic_engine.py or app/gemini_engine.py)
+    │       │  LLM selects KPI tool → function executes → LLM explains result
+    │       ▼
+    │    Chart Builder  (app/chart_builder.py)
+    │       │  df + spec → Plotly figure → Streamlit renders
+    │
+    └──▶ FastAPI Backend  (app/api.py)
+            │  POST /ask — proxied by yashvajifdar.com/api/lumber/ask
+            ▼
+         Personal Website Chat UI  (yashvajifdar.com/demos/lumber)
 ```
 
 **Key design principle:** The LLM never writes SQL or accesses raw data.
 It selects from pre-defined, tested KPI functions. Trust is built into the architecture.
 
 Full design decisions and tradeoff analysis: [`docs/architecture.md`](docs/architecture.md)
-Working backwards plan and milestones: [`docs/working_backwards.md`](docs/working_backwards.md)
+Roadmap and milestones: [`docs/working_backwards.md`](docs/working_backwards.md)
+Operations runbook: [`docs/runbook.md`](docs/runbook.md)
 
 ---
 
@@ -65,26 +71,33 @@ cd lumber-ai-analytics
 
 # 2. Create virtual environment and activate it
 python3 -m venv venv
-source venv/bin/activate   # your prompt will show (venv) when active
+source venv/bin/activate   # prompt will show (venv) when active
 pip install -r requirements.txt
 
 # 3. Configure API key
 cp .env.example .env
-# Edit .env — add your GOOGLE_API_KEY (Gemini) or ANTHROPIC_API_KEY
+# Edit .env — set ANTHROPIC_API_KEY (or GOOGLE_API_KEY for Gemini)
 
-# 4. Generate data and run ETL
+# 4. Generate synthetic data and run ETL
 python3 etl/generate_data.py
 python3 etl/loader.py
 
-# 5. Start the app
+# 5. Start the Streamlit app
 python3 -m streamlit run app/main.py
 ```
 
 > **Important:** always activate the venv (`source venv/bin/activate`) before running
-> any command. All dependencies are installed inside the venv, not system-wide.
-> If you see `ModuleNotFoundError`, the venv is not active.
+> any command. If you see `ModuleNotFoundError`, the venv is not active.
 
 Open **http://localhost:8501** in your browser.
+
+To run the FastAPI backend (for the personal website demo):
+
+```bash
+uvicorn app.api:app --reload --port 8001
+```
+
+Open <http://localhost:8001/health> to confirm it's running.
 
 ---
 
@@ -100,10 +113,10 @@ The app opens directly to the chat interface. Ask business questions in plain En
 "What inventory is running low?"
 ```
 
-Each question returns a natural language answer with a supporting chart.
+Each question returns a natural language answer with supporting data.
 The AI never makes up numbers — it queries the real data every time.
 
-Suggestion buttons are shown on first load. Follow-up prompts appear after each answer.
+Suggestion cards are shown on first load. Follow-up chips appear after each answer.
 
 ---
 
@@ -116,17 +129,14 @@ Change one line in `.env`. No code changes required.
 AI_PROVIDER=anthropic
 ANTHROPIC_API_KEY=sk-ant-...
 
-# Use Google Gemini (free tier available at aistudio.google.com)
+# Use Google Gemini (free tier at aistudio.google.com)
 AI_PROVIDER=gemini
 GOOGLE_API_KEY=AIza...
 ```
 
-The swap seam is `build_engine()` in [`app/chat_engine.py`](app/chat_engine.py).
-Both engines return the same `ChatResult` dataclass. Everything else in the system
-is unchanged — metrics layer, chart builder, dashboard pages, and all tests.
-
-See [`docs/architecture.md`](docs/architecture.md) for the full modular replacement guide
-(storage, frontend, visualization, and infrastructure are equally swappable).
+The swap seam is `build_engine()` in [`app/engine_factory.py`](app/engine_factory.py).
+Both engines implement the same interface and return the same `ChatResult` dataclass.
+Everything else — metrics layer, chart builder, API, and all tests — is unchanged.
 
 ---
 
@@ -136,34 +146,39 @@ See [`docs/architecture.md`](docs/architecture.md) for the full modular replacem
 lumber-ai-analytics/
 │
 ├── etl/
-│   ├── generate_data.py     # Synthetic data generator (15 months, realistic business patterns)
+│   ├── generate_data.py     # Synthetic data generator (15 months, realistic patterns)
 │   └── loader.py            # ETL: CSV → transform → SQLite
 │
 ├── metrics/
 │   └── kpis.py              # 11 KPI functions — all business logic lives here
 │
 ├── app/
-│   ├── main.py              # Streamlit UI (Dashboard, Products, Customers, Inventory, Chat)
-│   ├── chat_engine.py       # Anthropic tool-use engine + build_engine() factory
-│   ├── gemini_engine.py     # Google Gemini engine (same interface)
+│   ├── main.py              # Streamlit chat UI
+│   ├── api.py               # FastAPI backend — POST /ask, GET /health
+│   ├── engine_factory.py    # build_engine() — reads AI_PROVIDER, returns engine
+│   ├── engine_tools.py      # Shared: tool defs, chart specs, ChatResult, follow-ups
+│   ├── anthropic_engine.py  # AnthropicEngine — two-turn tool-use flow
+│   ├── gemini_engine.py     # GeminiEngine — same interface, different provider
 │   └── chart_builder.py     # build_chart(df, spec) → Plotly figure
 │
 ├── tests/
-│   ├── conftest.py          # Shared fixtures — temp DB with deterministic test data
-│   ├── test_etl.py          # ETL transformation tests (pure pandas, no DB)
-│   ├── test_kpis.py         # KPI function tests (61 tests, known-value assertions)
+│   ├── conftest.py          # Shared fixtures — in-memory DB with deterministic data
+│   ├── test_etl.py          # ETL transformation tests
+│   ├── test_kpis.py         # KPI function tests (known-value assertions)
 │   └── test_chat_engine.py  # AI engine tests (mocked API, all chart specs)
 │
 ├── docs/
-│   ├── architecture.md      # Full system design, decisions, tradeoff tables
-│   └── working_backwards.md # Amazon-style: press release, milestones, task breakdown
+│   ├── architecture.md      # System design, decisions, tradeoff tables
+│   ├── working_backwards.md # Roadmap: press release, milestones, risks
+│   ├── runbook.md           # Operations: local dev, deploy, adding KPIs
+│   └── demo_script.md       # Walkthrough script for client demos
 │
 ├── data/
 │   ├── raw/                 # Generated CSVs (gitignored)
 │   └── lumber.db            # SQLite warehouse (gitignored)
 │
 ├── .env.example             # Environment variable reference
-├── CLAUDE.md                # AI agent context for this project
+├── CLAUDE.md                # AI agent working context
 └── requirements.txt
 ```
 
@@ -173,18 +188,19 @@ lumber-ai-analytics/
 
 ```bash
 # All tests
-venv/bin/python -m pytest tests/ -v
+python -m pytest tests/ -v
 
 # Specific module
-venv/bin/python -m pytest tests/test_kpis.py -v
-venv/bin/python -m pytest tests/test_etl.py -v
-venv/bin/python -m pytest tests/test_chat_engine.py -v
+python -m pytest tests/test_kpis.py -v
+python -m pytest tests/test_etl.py -v
+python -m pytest tests/test_chat_engine.py -v
 ```
 
-**112 tests, 4 test classes:**
-- `test_etl.py` — 20 tests: financial calculations, returned order exclusion, date enrichment, inventory flags
-- `test_kpis.py` — 61 tests: every KPI function, known-value assertions, edge cases
-- `test_chat_engine.py` — 31 tests: two-turn tool-use flow (mocked API), chart builder coverage
+**119 tests, 4 test files:**
+
+- `test_etl.py` — ETL financial calculations, returned order exclusion, date enrichment, inventory flags
+- `test_kpis.py` — every KPI function, known-value assertions, edge cases
+- `test_chat_engine.py` — two-turn tool-use flow (mocked API), provider swap, chart builder coverage
 
 Tests use an in-memory SQLite DB with deterministic data — no production DB touched,
 no real API calls made.
@@ -194,7 +210,7 @@ no real API calls made.
 ## Environment Variables
 
 | Variable | Required | Description |
-|----------|----------|-------------|
+| --- | --- | --- |
 | `AI_PROVIDER` | No | `anthropic` (default) or `gemini` |
 | `ANTHROPIC_API_KEY` | If provider=anthropic | Get at console.anthropic.com |
 | `GOOGLE_API_KEY` | If provider=gemini | Get at aistudio.google.com (free tier) |
@@ -202,8 +218,6 @@ no real API calls made.
 ---
 
 ## Data Model
-
-The platform runs on a small canonical schema:
 
 | Table | Description |
 |-------|-------------|
@@ -215,12 +229,11 @@ The platform runs on a small canonical schema:
 | `fact_sales` | Denormalized fact table — completed orders only |
 | `daily_summary` | Pre-aggregated daily metrics |
 
-The synthetic dataset encodes realistic business patterns: spring/summer construction
-seasonality, contractor bulk-buying vs. retail behavior, cost fluctuations, and discounting.
+Synthetic data encodes realistic business patterns: spring/summer construction seasonality,
+contractor bulk-buying vs. retail behavior, cost fluctuations, and discounting.
 
-Replacing synthetic data with real data requires only changing the ingestion layer
-(`etl/generate_data.py`). The schema contract (`fact_sales` columns) is the only interface
-that must be preserved.
+To connect real data: replace `etl/generate_data.py` with a real connector.
+The `fact_sales` column contract is the only interface that must be preserved.
 
 ---
 
@@ -232,8 +245,8 @@ All business logic is in [`metrics/kpis.py`](metrics/kpis.py):
 |----------|-------------|
 | `revenue_over_time(period)` | Revenue, COGS, gross profit, margin by day/week/month |
 | `margin_trend(period)` | Margin % trend over time |
-| `top_products(n, by)` | Top N products by revenue, profit, or quantity |
-| `bottom_margin_products(n)` | Lowest margin products (min $5K revenue) |
+| `top_products(n, by)` | Top N products by revenue, profit, quantity, or margin |
+| `bottom_margin_products(n)` | Lowest margin products (min $5K revenue threshold) |
 | `revenue_by_category()` | Revenue and margin by product category |
 | `top_customers(n)` | Top N customers by revenue |
 | `customer_type_split()` | Contractor vs. retail revenue split |
@@ -248,16 +261,18 @@ All business logic is in [`metrics/kpis.py`](metrics/kpis.py):
 
 **Adding a new KPI function:**
 1. Add the function to `metrics/kpis.py`
-2. Add a tool definition to `TOOLS` in `app/chat_engine.py`
-3. Add a chart spec to `CHART_SPECS` in `app/chat_engine.py`
-4. Add to `_KPI_DISPATCH` in `app/chat_engine.py`
-5. Write tests in `tests/test_kpis.py`
+2. Add a tool definition to `TOOL_DEFINITIONS` in `app/engine_tools.py`
+3. Add a chart spec to `CHART_SPECS` in `app/engine_tools.py`
+4. Add to `KPI_DISPATCH` in `app/engine_tools.py`
+5. Add follow-up suggestions to `FOLLOW_UP_SUGGESTIONS` in `app/engine_tools.py`
+6. Write tests in `tests/test_kpis.py`
 
 **Adding a new AI provider:**
-1. Create `app/<provider>_engine.py` with a class implementing `.ask(question) -> ChatResult`
-2. Add a branch in `build_engine()` in `app/chat_engine.py`
+
+1. Create `app/<provider>_engine.py` with a class implementing `.ask(question, history) -> ChatResult`
+2. Add a branch in `build_engine()` in `app/engine_factory.py`
 3. Document the new `AI_PROVIDER` value in `.env.example`
 
 **Upgrading storage from SQLite to Postgres:**
-Change `DB_PATH` in `metrics/kpis.py` and `etl/loader.py` to a Postgres connection string.
+Change the connection string in `metrics/kpis.py` and `etl/loader.py`.
 All SQL is ANSI-standard. No other changes required.
