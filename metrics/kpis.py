@@ -213,7 +213,7 @@ def slow_moving_inventory() -> pd.DataFrame:
         ) s ON i.product_id = s.product_id
         GROUP BY i.name, i.category
         HAVING total_stock > 100
-        ORDER  BY units_sold_90d ASC
+        ORDER  BY units_sold_90d ASC, i.category ASC, inventory_value DESC
         LIMIT  15
     """
     return pd.read_sql(sql, _con())

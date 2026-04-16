@@ -200,8 +200,10 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "get_slow_moving_inventory",
         "description": (
-            "Products with high stock but low sales velocity in the last 90 days. "
-            "Use for questions about dead stock, slow movers, or inventory that isn't selling."
+            "Individual products with high stock but low sales velocity in the last 90 days, "
+            "showing units in stock, units sold, and inventory value tied up. "
+            "Use for questions about dead stock, slow movers, or inventory that isn't selling. "
+            "Results are product-level — mention specific product names, not categories."
         ),
         "parameters": {"type": "object", "properties": {}},
     },
@@ -316,10 +318,15 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
                     "stock_level", "reorder_point", "below_reorder", "inventory_value"],
     },
     "get_slow_moving_inventory": {
-        "type": "scatter",
-        "x": "units_sold_90d", "y": "total_stock",
-        "size": "inventory_value", "color_col": "category", "hover": "name",
-        "labels": {"units_sold_90d": "Units Sold (90d)", "total_stock": "Stock Level"},
+        "type": "table",
+        "columns": ["name", "category", "total_stock", "units_sold_90d", "inventory_value"],
+        "labels": {
+            "name": "Product",
+            "category": "Category",
+            "total_stock": "Units in Stock",
+            "units_sold_90d": "Sold (90d)",
+            "inventory_value": "Tied-Up Value ($)",
+        },
     },
     "get_top_products_by_category": {
         "type": "horizontal_bar",
