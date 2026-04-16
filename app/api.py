@@ -17,14 +17,22 @@ Run locally:
 
 from __future__ import annotations
 
+import logging
 import os
 import sys
+import time
 from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s — %(message)s",
+)
+logger = logging.getLogger("lumber_api")
 
 # Allow running as `uvicorn app.api:app` from the project root
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -44,16 +52,35 @@ def _ensure_database() -> None:
     """Run ETL if the database doesn't exist. Handles Render deploys where the
     build step may not have run the ETL scripts."""
     if os.path.exists(_DB_PATH):
+        logger.info("Database found at %s", _DB_PATH)
         return
+    logger.info("Database not found — running ETL pipeline")
     import subprocess
     root = os.path.dirname(os.path.dirname(__file__))
     subprocess.run(["python", "etl/generate_data.py"], cwd=root, check=True)
     subprocess.run(["python", "etl/loader.py"], cwd=root, check=True)
+    logger.info("ETL complete — database ready")
+
+
+def _friendly_error(raw: str) -> str:
+    """Map internal error strings to user-facing messages. The real error is
+    always logged server-side; this is what the user sees."""
+    low = raw.lower()
+    if "503" in raw or "unavailable" in low or "high demand" in low:
+        return "The AI service is temporarily busy — please try again in a moment."
+    if "no such table" in low or "operationalerror" in low:
+        return "There was a problem accessing the data. Please try again."
+    if "quota" in low or "rate limit" in low or "429" in raw:
+        return "Request limit reached — please try again in a few seconds."
+    if "timeout" in low:
+        return "The request timed out — please try again."
+    return "Something went wrong retrieving that data. Try rephrasing your question."
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _engine
+    logger.info("Starting up Lumber AI Analytics API")
     _ensure_database()
     _engine = build_engine()
     if _engine is None:
@@ -61,7 +88,9 @@ async def lifespan(app: FastAPI):
             "Engine failed to initialize — "
             "check AI_PROVIDER and the corresponding API key are set in environment variables."
         )
+    logger.info("Engine initialized: %s", type(_engine).__name__)
     yield
+    logger.info("Shutting down")
 
 
 app = FastAPI(title="Lumber AI Analytics API", lifespan=lifespan)
@@ -119,8 +148,26 @@ def health() -> dict[str, str]:
 def ask(req: AskRequest) -> AskResponse:
     if _engine is None:
         raise HTTPException(status_code=503, detail="Engine not initialized — missing API key.")
-    history = [{"role": m.role, "content": m.content} for m in req.history]
-    result: ChatResult = _engine.ask(req.question, history or None)
+
+    t0 = time.perf_counter()
+    logger.info("question=%r history_turns=%d", req.question, len(req.history))
+
+    try:
+        history = [{"role": m.role, "content": m.content} for m in req.history]
+        result: ChatResult = _engine.ask(req.question, history or None)
+    except Exception as exc:
+        logger.error("Unhandled engine error: %s", exc, exc_info=True)
+        return AskResponse(
+            text="I ran into a problem answering that question.",
+            error=_friendly_error(str(exc)),
+        )
+
+    elapsed = time.perf_counter() - t0
+
+    if result.error:
+        logger.warning("Engine error (kpi=%s, %.2fs): %s", result.kpi_called, elapsed, result.error)
+    else:
+        logger.info("OK kpi=%s elapsed=%.2fs", result.kpi_called, elapsed)
 
     chart_data = None
     if result.df is not None:
@@ -140,5 +187,5 @@ def ask(req: AskRequest) -> AskResponse:
         chart_spec=result.chart_spec,
         chart_data=chart_data,
         kpi_called=result.kpi_called,
-        error=result.error,
+        error=_friendly_error(result.error) if result.error else None,
     )
