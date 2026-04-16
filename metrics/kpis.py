@@ -86,6 +86,22 @@ def revenue_by_category() -> pd.DataFrame:
     return pd.read_sql(sql, _con())
 
 
+def top_products_by_category(category: str, n: int = 10) -> pd.DataFrame:
+    """Top products within a specific category, ranked by revenue."""
+    sql = """
+        SELECT name, category,
+               SUM(revenue)      AS revenue,
+               SUM(gross_profit) AS gross_profit,
+               ROUND(SUM(gross_profit)/SUM(revenue)*100, 1) AS margin_pct
+        FROM   fact_sales
+        WHERE  category = ?
+        GROUP  BY name, category
+        ORDER  BY revenue DESC
+        LIMIT  ?
+    """
+    return pd.read_sql(sql, _con(), params=(category, n))
+
+
 # ── customers ────────────────────────────────────────────────────────────────
 
 def top_customers(n: int = 10) -> pd.DataFrame:
@@ -112,6 +128,22 @@ def customer_type_split() -> pd.DataFrame:
         GROUP  BY type
     """
     return pd.read_sql(sql, _con())
+
+
+def top_customers_by_type(customer_type: str, n: int = 10) -> pd.DataFrame:
+    """Top customers within a specific type (Contractor or Retail), ranked by revenue."""
+    sql = """
+        SELECT customer_id, type,
+               SUM(revenue)      AS revenue,
+               SUM(gross_profit) AS gross_profit,
+               COUNT(DISTINCT order_id) AS orders
+        FROM   fact_sales
+        WHERE  type = ?
+        GROUP  BY customer_id, type
+        ORDER  BY revenue DESC
+        LIMIT  ?
+    """
+    return pd.read_sql(sql, _con(), params=(customer_type, n))
 
 
 def repeat_customer_rate() -> pd.DataFrame:

@@ -198,6 +198,51 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         ),
         "parameters": {"type": "object", "properties": {}},
     },
+    {
+        "name": "get_top_products_by_category",
+        "description": (
+            "Top products within a specific product category, ranked by revenue, with margin. "
+            "Use when the user asks about products in a specific category like 'framing lumber' or "
+            "'fasteners', or drills down from a category view."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "description": "The product category to filter by (e.g. 'Framing Lumber').",
+                },
+                "n": {
+                    "type": "integer",
+                    "description": "Number of products to return. Default: 10.",
+                },
+            },
+            "required": ["category"],
+        },
+    },
+    {
+        "name": "get_top_customers_by_type",
+        "description": (
+            "Top customers within a specific customer type (Contractor or Retail), ranked by revenue. "
+            "Use when the user asks about contractor customers specifically, retail customers specifically, "
+            "or drills down from the customer type split."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customer_type": {
+                    "type": "string",
+                    "enum": ["Contractor", "Retail"],
+                    "description": "Customer type to filter by.",
+                },
+                "n": {
+                    "type": "integer",
+                    "description": "Number of customers to return. Default: 10.",
+                },
+            },
+            "required": ["customer_type"],
+        },
+    },
 ]
 
 # ── chart specs (keyed by tool name) ─────────────────────────────────────────
@@ -230,6 +275,8 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
     "get_revenue_by_category": {
         "type": "pie",
         "names": "category", "values": "revenue",
+        "drill_key": "category",
+        "drill_question": "Show me the top products in {category}",
     },
     "get_top_customers": {
         "type": "horizontal_bar",
@@ -242,6 +289,8 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
         "type": "pie",
         "names": "type", "values": "revenue",
         "color_map": {"Contractor": "#2563EB", "Retail": "#F59E0B"},
+        "drill_key": "type",
+        "drill_question": "Show me the top {type} customers by revenue",
     },
     "get_repeat_customer_rate": {
         "type": "bar",
@@ -265,6 +314,16 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
         "size": "inventory_value", "color_col": "category", "hover": "name",
         "labels": {"units_sold_90d": "Units Sold (90d)", "total_stock": "Stock Level"},
     },
+    "get_top_products_by_category": {
+        "type": "horizontal_bar",
+        "x": "revenue", "y": "name",
+        "labels": {"name": "", "revenue": "Revenue ($)", "margin_pct": "Margin %"},
+    },
+    "get_top_customers_by_type": {
+        "type": "horizontal_bar",
+        "x": "revenue", "y": "customer_id",
+        "labels": {"customer_id": "", "revenue": "Revenue ($)"},
+    },
 }
 
 # ── KPI dispatch (tool name → function) ──────────────────────────────────────
@@ -280,7 +339,9 @@ KPI_DISPATCH: dict[str, Any] = {
     "get_repeat_customer_rate":   kpis.repeat_customer_rate,
     "get_revenue_by_location":    kpis.revenue_by_location,
     "get_inventory_health":       kpis.inventory_health,
-    "get_slow_moving_inventory":  kpis.slow_moving_inventory,
+    "get_slow_moving_inventory":       kpis.slow_moving_inventory,
+    "get_top_products_by_category":    kpis.top_products_by_category,
+    "get_top_customers_by_type":       kpis.top_customers_by_type,
 }
 
 # ── curated follow-up suggestions (keyed by tool name) ───────────────────────
@@ -342,6 +403,16 @@ FOLLOW_UP_SUGGESTIONS: dict[str, list[tuple[str, str]]] = {
         ("📦 Inventory health",    "What is our current inventory health?"),
         ("💰 Top revenue",         "Which products generate the most revenue?"),
         ("💰 Total sales",         "What were total sales this year?"),
+    ],
+    "get_top_products_by_category": [
+        ("🗂️ All categories",      "What does revenue by category look like?"),
+        ("📦 Top products",        "Which products are generating the most revenue overall?"),
+        ("📉 Lowest margins",      "Which products have the lowest margin?"),
+    ],
+    "get_top_customers_by_type": [
+        ("👷 Customer mix",        "What is the split between contractor and retail revenue?"),
+        ("👷 All top customers",   "Who are our top customers by revenue?"),
+        ("🔄 Repeat rate",         "What is our repeat customer rate?"),
     ],
 }
 
