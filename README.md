@@ -26,7 +26,7 @@ to learn, no analyst required.
 
 ## Architecture
 
-```
+```text
 Data Sources (CSV / QuickBooks / POS)
     │
     ▼
@@ -58,7 +58,7 @@ Metrics Layer  (metrics/kpis.py)
 It selects from pre-defined, tested KPI functions. Trust is built into the architecture.
 
 Full design decisions and tradeoff analysis: [`docs/architecture.md`](docs/architecture.md)
-Roadmap and milestones: [`docs/working_backwards.md`](docs/working_backwards.md)
+Roadmap and milestones: [`docs/roadmap.md`](docs/roadmap.md)
 Operations runbook: [`docs/runbook.md`](docs/runbook.md)
 
 ---
@@ -89,7 +89,7 @@ python3 -m streamlit run app/main.py
 > **Important:** always activate the venv (`source venv/bin/activate`) before running
 > any command. If you see `ModuleNotFoundError`, the venv is not active.
 
-Open **http://localhost:8501** in your browser.
+Open <http://localhost:8501> in your browser.
 
 To run the FastAPI backend (for the personal website demo):
 
@@ -142,7 +142,7 @@ Everything else — metrics layer, chart builder, API, and all tests — is unch
 
 ## Project Structure
 
-```
+```text
 lumber-ai-analytics/
 │
 ├── etl/
@@ -220,7 +220,7 @@ no real API calls made.
 ## Data Model
 
 | Table | Description |
-|-------|-------------|
+| --- | --- |
 | `customers` | 200 accounts (120 contractors, 80 retail) |
 | `products` | 20 SKUs across 8 categories |
 | `orders` | ~3,900 orders over 15 months |
@@ -242,7 +242,7 @@ The `fact_sales` column contract is the only interface that must be preserved.
 All business logic is in [`metrics/kpis.py`](metrics/kpis.py):
 
 | Function | Description |
-|----------|-------------|
+| --- | --- |
 | `revenue_over_time(period)` | Revenue, COGS, gross profit, margin by day/week/month |
 | `margin_trend(period)` | Margin % trend over time |
 | `top_products(n, by)` | Top N products by revenue, profit, quantity, or margin |
@@ -260,6 +260,7 @@ All business logic is in [`metrics/kpis.py`](metrics/kpis.py):
 ## Development Notes
 
 **Adding a new KPI function:**
+
 1. Add the function to `metrics/kpis.py`
 2. Add a tool definition to `TOOL_DEFINITIONS` in `app/engine_tools.py`
 3. Add a chart spec to `CHART_SPECS` in `app/engine_tools.py`

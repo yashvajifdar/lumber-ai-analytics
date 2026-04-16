@@ -10,9 +10,9 @@ A consulting demo and portfolio piece: an end-to-end analytics platform for
 lumber / building supply businesses. Demonstrates:
 
 - Data engineering: synthetic data generation, ETL pipeline, SQLite warehouse
-- Analytics: 10+ trusted KPI functions, metrics layer
-- AI: natural language querying routed to analytics functions
-- Product: Streamlit UI with dashboard, charts, and chat interface
+- Analytics: 11 trusted KPI functions, metrics layer
+- AI: natural language querying routed to analytics functions via Anthropic tool use
+- Product: Streamlit chat UI (local) + Next.js chat page at yashvajifdar.com/demos/lumber
 
 **Framing:** This is an analytics platform with a chat interface,
 not "a chatbot." The data model is the product.
@@ -27,15 +27,22 @@ etl/
   loader.py           ← ETL: CSV → transform → SQLite
 
 metrics/
-  kpis.py             ← all business logic (10 KPI functions, no raw SQL in app layer)
+  kpis.py             ← all business logic (11 KPI functions, no raw SQL in app layer)
 
 app/
-  main.py             ← Streamlit: Dashboard, Products, Customers, Inventory, Chat pages
+  main.py             ← Streamlit: chat-only UI
+  api.py              ← FastAPI: POST /ask, GET /health (for personal website)
+  engine_factory.py   ← build_engine() — reads AI_PROVIDER, returns engine instance
+  engine_tools.py     ← shared: TOOL_DEFINITIONS, CHART_SPECS, KPI_DISPATCH, ChatResult
+  anthropic_engine.py ← AnthropicEngine: two-turn tool-use flow
+  gemini_engine.py    ← GeminiEngine: same interface, Google provider
+  chart_builder.py    ← build_chart(df, spec) → Plotly figure
 
 tests/
-  conftest.py         ← shared fixtures
-  test_kpis.py        ← KPI function tests
-  test_etl.py         ← transformation tests
+  conftest.py         ← shared fixtures (in-memory SQLite, deterministic data)
+  test_etl.py         ← ETL transformation tests
+  test_kpis.py        ← KPI function tests (known-value assertions)
+  test_chat_engine.py ← AI engine tests (mocked API)
 
 data/
   raw/                ← generated CSVs (not committed)
@@ -47,6 +54,7 @@ data/
 ## Data Model
 
 Core tables in `lumber.db`:
+
 - `customers` — 200 customers (120 contractors, 80 retail)
 - `products` — 20 SKUs across 8 categories
 - `orders` — ~3,900 orders (Jan 2024 – Mar 2025)
@@ -60,6 +68,7 @@ Core tables in `lumber.db`:
 ## Current KPI Functions
 
 In `metrics/kpis.py`:
+
 1. `revenue_over_time(period)` — day/week/month
 2. `margin_trend(period)`
 3. `top_products(n, by)`
@@ -78,25 +87,16 @@ In `metrics/kpis.py`:
 
 - [x] Data generator
 - [x] ETL loader
-- [x] KPI functions
-- [x] Streamlit app (5 pages)
-- [x] Basic chat with keyword routing
-- [x] Tests — 112 tests passing (test_etl.py, test_kpis.py, test_chat_engine.py, conftest.py)
-- [x] Anthropic API integration — tool use, ChatEngine, chart_builder
-- [x] Architecture doc — docs/architecture.md (design decisions, tradeoffs, modular replacement guide)
-- [x] Working backwards plan — docs/working_backwards.md (milestones, task breakdown, parallelization)
-- [ ] README
-- [ ] Deploy to shareable URL (Streamlit Cloud or Fly.io)
+- [x] 11 KPI functions
+- [x] Streamlit chat app (suggestion cards, follow-up chips)
+- [x] Anthropic tool-use engine + Gemini engine (same interface)
+- [x] Tests — 119 tests passing
+- [x] README
+- [x] FastAPI backend — `app/api.py`
+- [x] Personal website integration — yashvajifdar.com/demos/lumber
+- [x] Docs — architecture.md, roadmap.md, runbook.md
+- [ ] Deploy FastAPI to Railway
 - [ ] Demo video
-
----
-
-## What to Build Next
-
-1. ~~Write tests~~ — done, 81/81 passing
-2. Add Anthropic API to chat page for real NL understanding
-3. Write README
-4. Polish demo flow
 
 ---
 
@@ -107,28 +107,24 @@ cd /Users/yashvajifdar/Workspace/projects/lumber-ai-analytics
 source venv/bin/activate
 python etl/generate_data.py   # generate CSVs
 python etl/loader.py          # load to SQLite
-streamlit run app/main.py     # start app
+streamlit run app/main.py     # Streamlit chat UI (localhost:8501)
+uvicorn app.api:app --reload --port 8001  # FastAPI backend (localhost:8001)
 ```
 
 Tests:
+
 ```bash
-pytest tests/ -v
+python -m pytest tests/ -v
 ```
+
+Full procedures: `docs/runbook.md`
 
 ---
 
-## Design Decisions
+## Key Docs
 
-**Why SQLite (not Postgres)?**
-Demo/portfolio context. The architecture is identical to a Postgres or BigQuery
-backend — swap the connection string. SQLite removes infrastructure setup friction.
-
-**Why keyword routing in chat (not free-form SQL)?**
-Trust. A chatbot that sometimes gives wrong financial answers is unusable.
-Routing to trusted KPI functions guarantees correct results.
-LLM is added for language understanding, not query generation.
-
-**Why Streamlit (not React)?**
-Speed to demo. Streamlit lets a data engineer build a working, professional-looking
-app without frontend infrastructure. For a client pitch this is sufficient.
-A production version would use a proper frontend.
+| Doc | Purpose |
+| --- | --- |
+| `docs/architecture.md` | System design, decisions, tradeoff tables |
+| `docs/roadmap.md` | Milestones, press release, risks |
+| `docs/runbook.md` | Local dev, Railway deploy, adding KPIs, troubleshooting |
