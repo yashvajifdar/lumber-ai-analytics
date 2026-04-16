@@ -151,9 +151,14 @@ next request. No always-on cost. Perfect for a demo app.
 
 No files to create — everything is committed:
 
-- `Procfile` — `web: uvicorn app.api:app --host 0.0.0.0 --port $PORT`
-- `nixpacks.toml` — builds data at deploy time (generates `data/lumber.db`)
-- `requirements.txt` — includes `fastapi` and `uvicorn`
+- `render.yaml` — defines build command, start command, and required env vars in code
+- `Procfile` — fallback start command (used if Render doesn't pick up `render.yaml`)
+- `requirements.txt` — all dependencies including `fastapi`, `uvicorn`, and AI SDKs
+
+**Why `render.yaml`?** The SQLite database (`data/lumber.db`) is gitignored — it's a
+generated artifact, not source data. Without a build step, Render has no database and
+every KPI query fails with `no such table: fact_sales`. The build command runs the full
+ETL pipeline so the database exists before the server starts.
 
 ### Deploy to Render
 
@@ -163,30 +168,38 @@ No files to create — everything is committed:
 
 3. Connect the `yashvajifdar/lumber-ai-analytics` GitHub repo
 
-4. Fill in the settings:
+4. Render will detect `render.yaml` and pre-fill build/start commands automatically.
+   Confirm the settings:
    - **Name:** `lumber-ai-analytics`
    - **Region:** US East (or closest)
    - **Branch:** `main`
-   - **Runtime:** Python 3
    - **Build Command:** `pip install -r requirements.txt && python etl/generate_data.py && python etl/loader.py`
    - **Start Command:** `uvicorn app.api:app --host 0.0.0.0 --port $PORT`
    - **Instance type:** Free
 
-5. Under **Environment Variables**, add:
-   - `AI_PROVIDER` = `anthropic`
-   - `ANTHROPIC_API_KEY` = `sk-ant-...` (from console.anthropic.com)
+5. Under **Environment Variables**, add your API key (never committed):
+   - `GOOGLE_API_KEY` = your Gemini key (from [aistudio.google.com](https://aistudio.google.com))
+   - `AI_PROVIDER` is already set to `gemini` in `render.yaml`
 
-6. Click **Create Web Service** — build takes ~3–5 minutes
+   > To switch to Anthropic: change `AI_PROVIDER` to `anthropic` and add `ANTHROPIC_API_KEY` instead.
+   > No code changes needed — `engine_factory.py` handles the switch.
 
-7. Copy the URL shown at the top: `https://lumber-ai-analytics.onrender.com`
+6. Click **Create Web Service** — build takes ~3–5 minutes on free tier
+   (installing dependencies + running ETL on every deploy)
+
+7. Copy the URL: `https://lumber-ai-analytics.onrender.com`
 
 ### Test the backend
 
 ```bash
 curl https://lumber-ai-analytics.onrender.com/health
 # → {"status":"ok"}
-# (first call after idle may take 30-60s — that's the cold start)
+# (first call after idle may take 30–60s — that's the cold start)
 ```
+
+If the service starts but `/ask` returns 500, check the Render logs. A `RuntimeError`
+at startup means the API key env var is missing or not being found. The server will refuse
+to start rather than serve broken requests — this is intentional (fail-fast pattern).
 
 ### Connect to Vercel
 
@@ -196,7 +209,7 @@ curl https://lumber-ai-analytics.onrender.com/health
    - Value: `https://lumber-ai-analytics.onrender.com`
    - Environment: Production
 3. Click **Save**
-4. Redeploy: **Deployments** → latest → **Redeploy** (or just push any commit to `main`)
+4. Redeploy: **Deployments** → latest → **Redeploy** (or push any commit to `main`)
 
 ### Verify end-to-end
 
@@ -237,6 +250,9 @@ which python  # should show .../venv/bin/python
 | `ANTHROPIC_API_KEY not set` | Missing `.env` | `cp .env.example .env` + fill in key |
 | AI engine tests fail | `load_dotenv()` timing | Check `engine_factory.py` — `load_dotenv()` must be at module level |
 | Follow-up chips crash | Stale session state format | Restart Streamlit; the defensive unpacking handles mixed formats |
+| Render: `RuntimeError: Engine failed to initialize` | API key env var not set on Render | Go to Render dashboard → Environment → add `GOOGLE_API_KEY` or `ANTHROPIC_API_KEY` |
+| Render: `no such table: fact_sales` | ETL never ran — database doesn't exist on server | Confirm build command in Render includes `python etl/generate_data.py && python etl/loader.py`; check `render.yaml` is detected |
+| Render: 502 on first load | Service was restarting or waking from sleep | Wait 30–60 seconds and retry; 502 during a deploy is normal |
 
 ---
 

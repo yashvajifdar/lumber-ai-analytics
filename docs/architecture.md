@@ -240,6 +240,12 @@ UI nor the FastAPI backend knows which engine is running.
 **Decision:** FastAPI wrapper over the existing Python engine. The personal website proxies
 to it via a Next.js API route, keeping the backend URL hidden and avoiding CORS issues.
 
+**Fail-fast pattern:** The engine is initialized once at startup via FastAPI's lifespan hook.
+If `build_engine()` returns `None` (missing API key), the server raises a `RuntimeError`
+immediately and refuses to start — rather than starting healthy and crashing on every request.
+The `/ask` route also has a defensive 503 guard in case the engine is somehow `None` at
+request time. Lesson from first deploy: silent failures are harder to debug than loud ones.
+
 ---
 
 ### 5.5 Data Source: Synthetic Data
