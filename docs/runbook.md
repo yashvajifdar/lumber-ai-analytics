@@ -139,47 +139,77 @@ Restart the Streamlit app or FastAPI server. No code changes needed.
 
 **Target:** Railway (free tier, recommended) or Render (free tier).
 
-### Railway
+### What's already done
+
+The deploy config is committed and pushed — no files to create:
+
+- `Procfile` — tells Railway how to start the app
+- `nixpacks.toml` — tells Railway to run ETL at build time (generates `data/lumber.db`)
+- `requirements.txt` — includes `fastapi` and `uvicorn`
+- Railway CLI installed at v4.37.4 via `npm install -g @railway/cli`
+
+### Railway login workaround
+
+The default `railway login` browser callback sometimes fails silently.
+If `railway login` says "Unauthorized" after the browser step:
+
+1. Go to [railway.app](https://railway.app) → sign in with GitHub
+2. Go to **Account Settings → Tokens** → **Create Token** → name it `cli`
+3. Copy the token
+4. In terminal: `railway login --token YOUR_TOKEN_HERE`
+
+Verify it worked: `railway whoami` should print your email.
+
+### Deploy
 
 ```bash
-# Install Railway CLI
-npm install -g @railway/cli
+cd /Users/yashvajifdar/Workspace/projects/lumber-ai-analytics
 
-# From the lumber-ai-analytics directory
+# Authenticate (see workaround above if browser flow fails)
 railway login
-railway init        # creates a new project
-railway up          # deploys current directory
+
+# Create a new Railway project (run once)
+railway init
+# → Select "Empty Project"
+# → Name it: lumber-ai-analytics
+
+# Deploy
+railway up
 ```
 
-Set environment variables in the Railway dashboard:
+Railway runs the `nixpacks.toml` build steps (install deps + generate data + load SQLite),
+then starts the server with the `Procfile` command. Build takes ~2–3 minutes.
 
-```text
-AI_PROVIDER=anthropic
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-Railway will detect `requirements.txt` and run:
+After `railway up` completes:
 
 ```bash
-uvicorn app.api:app --host 0.0.0.0 --port $PORT
+railway domain   # prints your app URL, e.g. https://lumber-ai-XXXXX.up.railway.app
 ```
 
-Add a `Procfile` if Railway doesn't pick up the start command automatically:
+### Set environment variables in Railway dashboard
 
-```text
-web: uvicorn app.api:app --host 0.0.0.0 --port $PORT
+1. Go to [railway.app](https://railway.app) → your project → **Variables**
+2. Add:
+   - `AI_PROVIDER` = `anthropic`
+   - `ANTHROPIC_API_KEY` = `sk-ant-...` (from console.anthropic.com)
+3. Click **Deploy** to restart with the new vars
+
+### Test the backend
+
+```bash
+curl https://lumber-ai-XXXXX.up.railway.app/health
+# → {"status":"ok"}
 ```
 
 The deployed URL looks like `https://lumber-ai-XXXXX.up.railway.app`.
 
-### After deployment
+### After deployment — connect to Vercel
 
-1. Test the health endpoint: `https://your-app.up.railway.app/health`
-2. In Vercel → personal-website → **Settings → Environment Variables** → add:
+1. In Vercel → `personal-website` → **Settings → Environment Variables** → add:
    ```text
    LUMBER_API_URL = https://your-app.up.railway.app
    ```
-3. Redeploy the personal website (or it will pick up on next push to `main`)
+2. Redeploy the personal website (or it will pick up on next push to `main`)
 
 ---
 
