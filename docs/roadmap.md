@@ -76,7 +76,8 @@ embedded in the personal brand site with consistent design.
 - [x] GitHub repo: github.com/yashvajifdar/lumber-ai-analytics
 - [x] Deploy FastAPI backend to Render (free, auto-sleeps)
 - [x] Structured logging + user-friendly error messages
-- [ ] Chart rendering in Next.js demo (Recharts — bar, line, pie, horizontal bar) — **next action**
+- [x] Chart rendering in Next.js demo (Recharts — bar, line, pie, horizontal bar)
+- [ ] Drill-down: clickable charts + 2 new KPIs (top_products_by_category, top_customers_by_type) — **next action**
 - [ ] Record 3-minute demo video (walk through chat with real questions)
 
 ### M2 — Pilot client (target: Q2 2026)
@@ -109,7 +110,8 @@ embedded in the personal brand site with consistent design.
 | --- | --- | --- |
 | ~~Deploy FastAPI to Render~~ | ~~1h~~ | Done |
 | ~~Set `LUMBER_API_URL` in Vercel~~ | ~~15m~~ | Done |
-| Chart rendering in Next.js (Recharts) | 2–3h | Install Recharts, build `Chart` component, wire to `chart_spec.type` — bar, line, pie, horizontal bar, table fallback |
+| ~~Chart rendering in Next.js (Recharts)~~ | ~~2–3h~~ | Done |
+| Drill-down interactions | 1.5h | 2 new KPIs (`top_products_by_category`, `top_customers_by_type`) + clickable chart elements that fire scoped follow-up questions |
 | Record demo video | 1h | Screen + voiceover, 3 min max |
 | Add Streamlit Cloud deploy | 1h | Secondary path for Python-native demo |
 
