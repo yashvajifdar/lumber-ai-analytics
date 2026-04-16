@@ -74,7 +74,7 @@ embedded in the personal brand site with consistent design.
 - [x] Personal website chat page (`yashvajifdar.com/demos/lumber`)
 - [x] Next.js API proxy hiding backend URL from browser
 - [x] GitHub repo: github.com/yashvajifdar/lumber-ai-analytics
-- [ ] Deploy FastAPI backend to Railway — **next action**
+- [ ] Deploy FastAPI backend to Render (free, auto-sleeps) — **next action**
 - [ ] Record 3-minute demo video (walk through chat with real questions)
 
 ### M2 — Pilot client (target: Q2 2026)
@@ -105,7 +105,7 @@ embedded in the personal brand site with consistent design.
 
 | Task | Est. | Notes |
 | --- | --- | --- |
-| Deploy FastAPI to Railway | 1h | See `docs/runbook.md` section 9 |
+| Deploy FastAPI to Render | 1h | See `docs/runbook.md` section 9 |
 | Set `LUMBER_API_URL` in Vercel | 15m | Vercel → personal-website → Settings → Env vars |
 | Record demo video | 1h | Screen + voiceover, 3 min max |
 | Add Streamlit Cloud deploy | 1h | Secondary path for Python-native demo |

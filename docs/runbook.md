@@ -137,79 +137,72 @@ Restart the Streamlit app or FastAPI server. No code changes needed.
 
 ## 9. Deploying the FastAPI Backend
 
-**Target:** Railway (free tier, recommended) or Render (free tier).
+**Target: Render free tier** — auto-sleeps after 15 minutes of inactivity, wakes on the
+next request. No always-on cost. Perfect for a demo app.
 
-### What's already done
+> **Why not Railway?** Railway runs containers 24/7 — no auto-sleep, continuous compute
+> cost even with zero traffic. Render's free tier gives sleep-on-idle behavior by default.
+>
+> **Trade-off:** First request after the service has been idle takes 30–60 seconds (cold
+> start while Render wakes the container). Subsequent requests are fast. The `/demos/lumber`
+> proxy has a 30-second timeout, so cold starts are handled gracefully.
 
-The deploy config is committed and pushed — no files to create:
+### What's already in the repo
 
-- `Procfile` — tells Railway how to start the app
-- `nixpacks.toml` — tells Railway to run ETL at build time (generates `data/lumber.db`)
+No files to create — everything is committed:
+
+- `Procfile` — `web: uvicorn app.api:app --host 0.0.0.0 --port $PORT`
+- `nixpacks.toml` — builds data at deploy time (generates `data/lumber.db`)
 - `requirements.txt` — includes `fastapi` and `uvicorn`
-- Railway CLI installed at v4.37.4 via `npm install -g @railway/cli`
 
-### Railway login workaround
+### Deploy to Render
 
-The default `railway login` browser callback sometimes fails silently.
-If `railway login` says "Unauthorized" after the browser step:
+1. Go to [render.com](https://render.com) → **Sign up with GitHub** (free)
 
-1. Go to [railway.app](https://railway.app) → sign in with GitHub
-2. Go to **Account Settings → Tokens** → **Create Token** → name it `cli`
-3. Copy the token
-4. In terminal: `railway login --token YOUR_TOKEN_HERE`
+2. Click **New → Web Service**
 
-Verify it worked: `railway whoami` should print your email.
+3. Connect the `yashvajifdar/lumber-ai-analytics` GitHub repo
 
-### Deploy
+4. Fill in the settings:
+   - **Name:** `lumber-ai-analytics`
+   - **Region:** US East (or closest)
+   - **Branch:** `main`
+   - **Runtime:** Python 3
+   - **Build Command:** `pip install -r requirements.txt && python etl/generate_data.py && python etl/loader.py`
+   - **Start Command:** `uvicorn app.api:app --host 0.0.0.0 --port $PORT`
+   - **Instance type:** Free
 
-```bash
-cd /Users/yashvajifdar/Workspace/projects/lumber-ai-analytics
-
-# Authenticate (see workaround above if browser flow fails)
-railway login
-
-# Create a new Railway project (run once)
-railway init
-# → Select "Empty Project"
-# → Name it: lumber-ai-analytics
-
-# Deploy
-railway up
-```
-
-Railway runs the `nixpacks.toml` build steps (install deps + generate data + load SQLite),
-then starts the server with the `Procfile` command. Build takes ~2–3 minutes.
-
-After `railway up` completes:
-
-```bash
-railway domain   # prints your app URL, e.g. https://lumber-ai-XXXXX.up.railway.app
-```
-
-### Set environment variables in Railway dashboard
-
-1. Go to [railway.app](https://railway.app) → your project → **Variables**
-2. Add:
+5. Under **Environment Variables**, add:
    - `AI_PROVIDER` = `anthropic`
    - `ANTHROPIC_API_KEY` = `sk-ant-...` (from console.anthropic.com)
-3. Click **Deploy** to restart with the new vars
+
+6. Click **Create Web Service** — build takes ~3–5 minutes
+
+7. Copy the URL shown at the top: `https://lumber-ai-analytics.onrender.com`
 
 ### Test the backend
 
 ```bash
-curl https://lumber-ai-XXXXX.up.railway.app/health
+curl https://lumber-ai-analytics.onrender.com/health
 # → {"status":"ok"}
+# (first call after idle may take 30-60s — that's the cold start)
 ```
 
-The deployed URL looks like `https://lumber-ai-XXXXX.up.railway.app`.
+### Connect to Vercel
 
-### After deployment — connect to Vercel
+1. Go to [vercel.com](https://vercel.com) → `personal-website` → **Settings → Environment Variables**
+2. Add:
+   - Name: `LUMBER_API_URL`
+   - Value: `https://lumber-ai-analytics.onrender.com`
+   - Environment: Production
+3. Click **Save**
+4. Redeploy: **Deployments** → latest → **Redeploy** (or just push any commit to `main`)
 
-1. In Vercel → `personal-website` → **Settings → Environment Variables** → add:
-   ```text
-   LUMBER_API_URL = https://your-app.up.railway.app
-   ```
-2. Redeploy the personal website (or it will pick up on next push to `main`)
+### Verify end-to-end
+
+Visit [yashvajifdar.com/demos/lumber](https://yashvajifdar.com/demos/lumber) and ask
+"How has revenue trended this year?" — you should get an AI response within ~10 seconds
+(or ~60 seconds if the Render service is waking from sleep).
 
 ---
 
