@@ -22,7 +22,7 @@ import sys
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -42,6 +42,11 @@ _engine = None
 async def lifespan(app: FastAPI):
     global _engine
     _engine = build_engine()
+    if _engine is None:
+        raise RuntimeError(
+            "Engine failed to initialize — "
+            "check AI_PROVIDER and the corresponding API key are set in environment variables."
+        )
     yield
 
 
@@ -98,6 +103,8 @@ def health() -> dict[str, str]:
 
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest) -> AskResponse:
+    if _engine is None:
+        raise HTTPException(status_code=503, detail="Engine not initialized — missing API key.")
     history = [{"role": m.role, "content": m.content} for m in req.history]
     result: ChatResult = _engine.ask(req.question, history or None)
 
