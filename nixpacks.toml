@@ -1,0 +1,9 @@
+[phases.build]
+cmds = [
+  "pip install -r requirements.txt",
+  "python etl/generate_data.py",
+  "python etl/loader.py"
+]
+
+[start]
+cmd = "uvicorn app.api:app --host 0.0.0.0 --port $PORT"
