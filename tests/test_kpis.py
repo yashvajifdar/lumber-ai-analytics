@@ -42,24 +42,24 @@ class TestRevenueOverTime:
         assert (result["margin_pct"] <= 100).all()
 
     def test_known_january_revenue(self, test_db):
-        # Jan 2024: O001 (69.90+90.00) + O002 (13.98) = 173.88
+        # Jan 2024: O001 (69.90+90.00) + O002 (13.98) + O006/C003 (69.90) = 243.78
         result = kpis.revenue_over_time("month")
         jan = result[result["period"] == "2024-01"]
         assert len(jan) == 1
-        assert jan.iloc[0]["revenue"] == pytest.approx(173.88, abs=0.01)
+        assert jan.iloc[0]["revenue"] == pytest.approx(243.78, abs=0.01)
 
     def test_known_january_gross_profit(self, test_db):
-        # Jan 2024 GP: 34.90 + 30.00 + 6.98 = 71.88
+        # Jan 2024 GP: 34.90 + 30.00 + 6.98 + 34.90 (O006/C003) = 106.78
         result = kpis.revenue_over_time("month")
         jan = result[result["period"] == "2024-01"]
-        assert jan.iloc[0]["gross_profit"] == pytest.approx(71.88, abs=0.01)
+        assert jan.iloc[0]["gross_profit"] == pytest.approx(106.78, abs=0.01)
 
     def test_known_february_revenue(self, test_db):
-        # Feb 2024: O004 only = 130.00
+        # Feb 2024: O004 (130.00) + O007/C003 (34.95) = 164.95
         result = kpis.revenue_over_time("month")
         feb = result[result["period"] == "2024-02"]
         assert len(feb) == 1
-        assert feb.iloc[0]["revenue"] == pytest.approx(130.00, abs=0.01)
+        assert feb.iloc[0]["revenue"] == pytest.approx(164.95, abs=0.01)
 
     def test_day_period_returns_dataframe(self, test_db):
         result = kpis.revenue_over_time("day")
@@ -354,3 +354,130 @@ class TestSlowMovingInventory:
         if len(result) > 1:
             sold = result["units_sold_90d"].tolist()
             assert sold == sorted(sold)
+
+
+# ── sales_by_rep ──────────────────────────────────────────────────────────────
+
+class TestSalesByRep:
+    def test_returns_dataframe(self, test_db):
+        assert isinstance(kpis.sales_by_rep(), pd.DataFrame)
+
+    def test_has_required_columns(self, test_db):
+        result = kpis.sales_by_rep()
+        for col in ("sales_rep", "location", "revenue", "gross_profit", "margin_pct", "orders", "customers"):
+            assert col in result.columns, f"Missing column: {col}"
+
+    def test_known_mike_torres_revenue(self, test_db):
+        # Mike Torres: O001 (69.90+90.00) + O004 (130.00) + O005 (41.25) = 331.15
+        result = kpis.sales_by_rep()
+        mike = result[result["sales_rep"] == "Mike Torres"]
+        assert len(mike) == 1
+        assert mike.iloc[0]["revenue"] == pytest.approx(331.15, abs=0.01)
+
+    def test_known_sarah_chen_revenue(self, test_db):
+        # Sarah Chen: O006 (69.90) + O007 (34.95) = 104.85
+        result = kpis.sales_by_rep()
+        sarah = result[result["sales_rep"] == "Sarah Chen"]
+        assert len(sarah) == 1
+        assert sarah.iloc[0]["revenue"] == pytest.approx(104.85, abs=0.01)
+
+    def test_location_filter_excludes_other_yards(self, test_db):
+        # Yard A only — Amanda Price (Yard B) must not appear
+        result = kpis.sales_by_rep(location="Yard A")
+        assert "Amanda Price" not in result["sales_rep"].values
+
+    def test_location_filter_includes_yard_a_reps(self, test_db):
+        result = kpis.sales_by_rep(location="Yard A")
+        assert "Mike Torres" in result["sales_rep"].values
+        assert "Sarah Chen" in result["sales_rep"].values
+
+    def test_sorted_by_revenue_descending_by_default(self, test_db):
+        result = kpis.sales_by_rep()
+        revenues = result["revenue"].tolist()
+        assert revenues == sorted(revenues, reverse=True)
+
+    def test_sort_by_gross_profit(self, test_db):
+        result = kpis.sales_by_rep(sort_by="gross_profit")
+        gp = result["gross_profit"].tolist()
+        assert gp == sorted(gp, reverse=True)
+
+    def test_invalid_sort_by_defaults_to_revenue(self, test_db):
+        # Should not raise — falls back to revenue
+        result = kpis.sales_by_rep(sort_by="invalid_column")
+        assert isinstance(result, pd.DataFrame)
+        revenues = result["revenue"].tolist()
+        assert revenues == sorted(revenues, reverse=True)
+
+    def test_date_filter_restricts_results(self, test_db):
+        # Filter to Jan 2024 only — O004 (Feb) and O005 (recent) excluded
+        result = kpis.sales_by_rep(date_from="2024-01-01", date_to="2024-01-31")
+        mike = result[result["sales_rep"] == "Mike Torres"]
+        # Only O001 (159.90) in Jan for Mike Torres
+        assert mike.iloc[0]["revenue"] == pytest.approx(159.90, abs=0.01)
+
+    def test_orders_count_correct(self, test_db):
+        # Mike Torres: 3 distinct orders (O001, O004, O005)
+        result = kpis.sales_by_rep()
+        mike = result[result["sales_rep"] == "Mike Torres"]
+        assert mike.iloc[0]["orders"] == 3
+
+    def test_customers_count_correct(self, test_db):
+        # Mike Torres: 1 distinct customer (C001 on all orders)
+        result = kpis.sales_by_rep()
+        mike = result[result["sales_rep"] == "Mike Torres"]
+        assert mike.iloc[0]["customers"] == 1
+
+
+# ── inactive_customers ────────────────────────────────────────────────────────
+
+class TestInactiveCustomers:
+    def test_returns_dataframe(self, test_db):
+        assert isinstance(kpis.inactive_customers(), pd.DataFrame)
+
+    def test_has_required_columns(self, test_db):
+        result = kpis.inactive_customers()
+        for col in ("customer_id", "type", "location", "last_order_date",
+                    "lifetime_revenue", "total_orders"):
+            assert col in result.columns, f"Missing column: {col}"
+
+    def test_c003_appears_as_inactive(self, test_db):
+        # C003 has 2 orders (Jan/Feb 2024), both older than MAX(order_date) - 90 days
+        result = kpis.inactive_customers(period="quarter")
+        assert "C003" in result["customer_id"].values
+
+    def test_active_customer_excluded(self, test_db):
+        # C001 has O005 on RECENT_DATE — within the 90-day window → NOT inactive
+        result = kpis.inactive_customers(period="quarter")
+        assert "C001" not in result["customer_id"].values
+
+    def test_single_order_customer_excluded(self, test_db):
+        # C002 has only 1 order → excluded by HAVING total_orders >= 2
+        result = kpis.inactive_customers(period="quarter")
+        assert "C002" not in result["customer_id"].values
+
+    def test_c003_lifetime_revenue(self, test_db):
+        # C003: O006 (69.90) + O007 (34.95) = 104.85
+        result = kpis.inactive_customers()
+        c003 = result[result["customer_id"] == "C003"]
+        assert c003.iloc[0]["lifetime_revenue"] == pytest.approx(104.85, abs=0.01)
+
+    def test_c003_total_orders(self, test_db):
+        result = kpis.inactive_customers()
+        c003 = result[result["customer_id"] == "C003"]
+        assert c003.iloc[0]["total_orders"] == 2
+
+    def test_customer_type_filter(self, test_db):
+        # Filter to Retail — C003 is Contractor, should not appear
+        result = kpis.inactive_customers(customer_type="Retail")
+        assert "C003" not in result["customer_id"].values
+
+    def test_invalid_period_defaults_gracefully(self, test_db):
+        # Unknown period falls back to 90-day default via dict.get
+        result = kpis.inactive_customers(period="decade")
+        assert isinstance(result, pd.DataFrame)
+
+    def test_sorted_oldest_inactive_first(self, test_db):
+        result = kpis.inactive_customers()
+        if len(result) > 1:
+            dates = result["last_order_date"].tolist()
+            assert dates == sorted(dates)

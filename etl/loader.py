@@ -38,10 +38,13 @@ def transform(raw: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
 
     # join orders → items for a flat fact table
     fact = items.merge(orders[["order_id", "customer_id", "order_date",
-                                "location", "status", "year", "month", "week"]],
+                                "location", "status", "year", "month", "week", "sales_rep"]],
                        on="order_id")
     fact = fact.merge(products[["product_id", "name", "category"]], on="product_id")
-    fact = fact.merge(customers[["customer_id", "type"]], on="customer_id")
+    fact = fact.merge(
+        customers[["customer_id", "type", "name"]].rename(columns={"name": "customer_name"}),
+        on="customer_id",
+    )
 
     # exclude returned orders from primary metrics
     fact_clean = fact[fact["status"] == "completed"].copy()

@@ -8,20 +8,56 @@ import pandas as pd
 
 DB_PATH = "data/lumber.db"
 
+_SORT_CUSTOMERS = {"revenue", "gross_profit", "orders"}
+_SORT_PRODUCTS  = {"revenue", "gross_profit", "quantity", "margin_pct"}
+_SORT_REPS      = {"revenue", "gross_profit", "orders"}
+
 
 def _con() -> sqlite3.Connection:
     return sqlite3.connect(DB_PATH)
 
 
+def _build_where(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> tuple[str, list]:
+    """Build a parameterized WHERE clause from optional filter args."""
+    clauses: list[str] = []
+    params: list = []
+    if date_from:
+        clauses.append("order_date >= ?")
+        params.append(date_from)
+    if date_to:
+        clauses.append("order_date <= ?")
+        params.append(date_to)
+    if location:
+        clauses.append("location = ?")
+        params.append(location)
+    if customer_type:
+        clauses.append("type = ?")
+        params.append(customer_type)
+    where = ("WHERE " + " AND ".join(clauses)) if clauses else ""
+    return where, params
+
+
 # ── revenue ──────────────────────────────────────────────────────────────────
 
-def revenue_over_time(period: str = "month") -> pd.DataFrame:
+def revenue_over_time(
+    period: str = "month",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> pd.DataFrame:
     """period: 'day' | 'week' | 'month'"""
     groupby = {
         "day":   "DATE(order_date)",
         "week":  "strftime('%Y-W%W', order_date)",
         "month": "strftime('%Y-%m', order_date)",
     }[period]
+    where, params = _build_where(date_from, date_to, location, customer_type)
     sql = f"""
         SELECT {groupby} AS period,
                SUM(revenue)       AS revenue,
@@ -29,22 +65,52 @@ def revenue_over_time(period: str = "month") -> pd.DataFrame:
                SUM(gross_profit)  AS gross_profit,
                COUNT(DISTINCT order_id) AS orders
         FROM   fact_sales
+        {where}
         GROUP  BY 1
         ORDER  BY 1
     """
-    df = pd.read_sql(sql, _con())
+    df = pd.read_sql(sql, _con(), params=params)
     df["margin_pct"] = (df["gross_profit"] / df["revenue"] * 100).round(2)
     return df
 
 
-def margin_trend(period: str = "month") -> pd.DataFrame:
-    return revenue_over_time(period)[["period", "margin_pct", "revenue", "gross_profit"]]
+def margin_trend(
+    period: str = "month",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> pd.DataFrame:
+    return revenue_over_time(period, date_from, date_to, location, customer_type)[
+        ["period", "margin_pct", "revenue", "gross_profit"]
+    ]
 
 
 # ── products ─────────────────────────────────────────────────────────────────
 
-def top_products(n: int = 10, by: str = "revenue") -> pd.DataFrame:
+def top_products(
+    n: int = 10,
+    by: str = "revenue",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+    min_revenue: float | None = None,
+    min_margin_pct: float | None = None,
+) -> pd.DataFrame:
     """by: 'revenue' | 'gross_profit' | 'quantity' | 'margin_pct'"""
+    if by not in _SORT_PRODUCTS:
+        by = "revenue"
+    where, params = _build_where(date_from, date_to, location, customer_type)
+    having_clauses: list[str] = []
+    having_params: list = []
+    if min_revenue is not None:
+        having_clauses.append("SUM(revenue) >= ?")
+        having_params.append(min_revenue)
+    if min_margin_pct is not None:
+        having_clauses.append("ROUND(SUM(gross_profit)/SUM(revenue)*100, 1) >= ?")
+        having_params.append(min_margin_pct)
+    having = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
     sql = f"""
         SELECT name, category,
                SUM(revenue)      AS revenue,
@@ -52,102 +118,182 @@ def top_products(n: int = 10, by: str = "revenue") -> pd.DataFrame:
                SUM(quantity)     AS quantity,
                ROUND(SUM(gross_profit)/SUM(revenue)*100, 1) AS margin_pct
         FROM   fact_sales
+        {where}
         GROUP  BY name, category
+        {having}
         ORDER  BY {by} DESC
-        LIMIT  {n}
+        LIMIT  ?
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params + having_params + [n])
 
 
-def bottom_margin_products(n: int = 10) -> pd.DataFrame:
+def bottom_margin_products(
+    n: int = 10,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> pd.DataFrame:
+    where, params = _build_where(date_from, date_to, location, customer_type)
     sql = f"""
         SELECT name, category,
                SUM(revenue) AS revenue,
                ROUND(SUM(gross_profit)/SUM(revenue)*100,1) AS margin_pct
         FROM   fact_sales
+        {where}
         GROUP  BY name, category
         HAVING SUM(revenue) > 5000
         ORDER  BY margin_pct ASC
-        LIMIT  {n}
+        LIMIT  ?
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params + [n])
 
 
-def revenue_by_category() -> pd.DataFrame:
-    sql = """
+def revenue_by_category(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> pd.DataFrame:
+    where, params = _build_where(date_from, date_to, location, customer_type)
+    sql = f"""
         SELECT category,
                SUM(revenue)      AS revenue,
                SUM(gross_profit) AS gross_profit,
                ROUND(SUM(gross_profit)/SUM(revenue)*100,1) AS margin_pct
         FROM   fact_sales
+        {where}
         GROUP  BY category
         ORDER  BY revenue DESC
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params)
 
 
-def top_products_by_category(category: str, n: int = 10) -> pd.DataFrame:
+def top_products_by_category(
+    category: str,
+    n: int = 10,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+) -> pd.DataFrame:
     """Top products within a specific category, ranked by revenue."""
-    sql = """
+    where, params = _build_where(date_from, date_to, location)
+    cat_clause = ("AND category = ?" if where else "WHERE category = ?")
+    sql = f"""
         SELECT name, category,
                SUM(revenue)      AS revenue,
                SUM(gross_profit) AS gross_profit,
                ROUND(SUM(gross_profit)/SUM(revenue)*100, 1) AS margin_pct
         FROM   fact_sales
-        WHERE  category = ?
+        {where}
+        {cat_clause}
         GROUP  BY name, category
         ORDER  BY revenue DESC
         LIMIT  ?
     """
-    return pd.read_sql(sql, _con(), params=(category, n))
+    return pd.read_sql(sql, _con(), params=params + [category, n])
 
 
 # ── customers ────────────────────────────────────────────────────────────────
 
-def top_customers(n: int = 10) -> pd.DataFrame:
+def top_customers(
+    n: int = 10,
+    sort_by: str = "revenue",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+    min_revenue: float | None = None,
+    min_orders: int | None = None,
+) -> pd.DataFrame:
+    if sort_by not in _SORT_CUSTOMERS:
+        sort_by = "revenue"
+    where, params = _build_where(date_from, date_to, location, customer_type)
+    having_clauses: list[str] = []
+    having_params: list = []
+    if min_revenue is not None:
+        having_clauses.append("SUM(revenue) >= ?")
+        having_params.append(min_revenue)
+    if min_orders is not None:
+        having_clauses.append("COUNT(DISTINCT order_id) >= ?")
+        having_params.append(min_orders)
+    having = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
     sql = f"""
-        SELECT customer_id, type,
+        SELECT customer_id, customer_name, type,
                SUM(revenue)      AS revenue,
                SUM(gross_profit) AS gross_profit,
                COUNT(DISTINCT order_id) AS orders
         FROM   fact_sales
-        GROUP  BY customer_id, type
-        ORDER  BY revenue DESC
-        LIMIT  {n}
+        {where}
+        GROUP  BY customer_id, customer_name, type
+        {having}
+        ORDER  BY {sort_by} DESC
+        LIMIT  ?
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params + having_params + [n])
 
 
-def customer_type_split() -> pd.DataFrame:
-    sql = """
+def customer_type_split(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+) -> pd.DataFrame:
+    where, params = _build_where(date_from, date_to, location)
+    sql = f"""
         SELECT type,
                SUM(revenue) AS revenue,
                COUNT(DISTINCT customer_id) AS customers,
                COUNT(DISTINCT order_id)    AS orders
         FROM   fact_sales
+        {where}
         GROUP  BY type
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params)
 
 
-def top_customers_by_type(customer_type: str, n: int = 10) -> pd.DataFrame:
-    """Top customers within a specific type (Contractor or Retail), ranked by revenue."""
-    sql = """
-        SELECT customer_id, type,
+def top_customers_by_type(
+    customer_type: str,
+    n: int = 10,
+    sort_by: str = "revenue",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    min_revenue: float | None = None,
+) -> pd.DataFrame:
+    """Top customers within a specific type (Contractor or Retail), ranked by chosen metric."""
+    if sort_by not in _SORT_CUSTOMERS:
+        sort_by = "revenue"
+    where, params = _build_where(date_from, date_to, location)
+    type_clause = ("AND type = ?" if where else "WHERE type = ?")
+    having_clauses: list[str] = []
+    having_params: list = []
+    if min_revenue is not None:
+        having_clauses.append("SUM(revenue) >= ?")
+        having_params.append(min_revenue)
+    having = ("HAVING " + " AND ".join(having_clauses)) if having_clauses else ""
+    sql = f"""
+        SELECT customer_id, customer_name, type,
                SUM(revenue)      AS revenue,
                SUM(gross_profit) AS gross_profit,
                COUNT(DISTINCT order_id) AS orders
         FROM   fact_sales
-        WHERE  type = ?
-        GROUP  BY customer_id, type
-        ORDER  BY revenue DESC
+        {where}
+        {type_clause}
+        GROUP  BY customer_id, customer_name, type
+        {having}
+        ORDER  BY {sort_by} DESC
         LIMIT  ?
     """
-    return pd.read_sql(sql, _con(), params=(customer_type, n))
+    return pd.read_sql(sql, _con(), params=params + [customer_type] + having_params + [n])
 
 
-def repeat_customer_rate() -> pd.DataFrame:
-    sql = """
+def repeat_customer_rate(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+) -> pd.DataFrame:
+    where, params = _build_where(date_from, date_to, location)
+    sql = f"""
         SELECT type,
                COUNT(DISTINCT customer_id) AS total_customers,
                SUM(CASE WHEN orders >= 2 THEN 1 ELSE 0 END) AS repeat_customers
@@ -155,33 +301,126 @@ def repeat_customer_rate() -> pd.DataFrame:
             SELECT customer_id, type,
                    COUNT(DISTINCT order_id) AS orders
             FROM   fact_sales
+            {where}
             GROUP  BY customer_id, type
         )
         GROUP BY type
     """
-    df = pd.read_sql(sql, _con())
+    df = pd.read_sql(sql, _con(), params=params)
     df["repeat_rate_pct"] = (df["repeat_customers"] / df["total_customers"] * 100).round(1)
     return df
 
 
+def inactive_customers(
+    period: str = "quarter",
+    location: str | None = None,
+    customer_type: str | None = None,
+    min_lifetime_revenue: float | None = None,
+    n: int = 20,
+) -> pd.DataFrame:
+    """Customers with 2+ lifetime orders but none in the most recent period window.
+
+    Anchors to MAX(order_date) in the dataset so the query works correctly against
+    synthetic data whose end date may be in the past.
+    """
+    days = {"month": 30, "quarter": 90, "year": 365}.get(period, 90)
+
+    outer_params: list = []
+    filter_clauses: list[str] = []
+    if location:
+        filter_clauses.append("location = ?")
+        outer_params.append(location)
+    if customer_type:
+        filter_clauses.append("type = ?")
+        outer_params.append(customer_type)
+    filter_clause = ("AND " + " AND ".join(filter_clauses)) if filter_clauses else ""
+
+    having_clauses = ["total_orders >= 2"]
+    having_params: list = []
+    if min_lifetime_revenue is not None:
+        having_clauses.append("SUM(revenue) >= ?")
+        having_params.append(min_lifetime_revenue)
+    having = "HAVING " + " AND ".join(having_clauses)
+
+    sql = f"""
+        SELECT customer_id, customer_name, type, location,
+               MAX(order_date)          AS last_order_date,
+               SUM(revenue)             AS lifetime_revenue,
+               COUNT(DISTINCT order_id) AS total_orders
+        FROM   fact_sales
+        WHERE  customer_id NOT IN (
+            SELECT DISTINCT customer_id
+            FROM   fact_sales
+            WHERE  order_date >= DATE(
+                (SELECT MAX(order_date) FROM fact_sales),
+                '-{days} days'
+            )
+        )
+        {filter_clause}
+        GROUP  BY customer_id, customer_name, type, location
+        {having}
+        ORDER  BY last_order_date ASC
+        LIMIT  ?
+    """
+    return pd.read_sql(sql, _con(), params=outer_params + having_params + [n])
+
+
 # ── location ─────────────────────────────────────────────────────────────────
 
-def revenue_by_location(period: str = "month") -> pd.DataFrame:
+def revenue_by_location(
+    period: str = "month",
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+) -> pd.DataFrame:
     groupby = {
         "month": "strftime('%Y-%m', order_date)",
         "week":  "strftime('%Y-W%W', order_date)",
         "total": "'all'",
     }[period]
+    where, params = _build_where(date_from, date_to, location, customer_type)
     sql = f"""
         SELECT location, {groupby} AS period,
                SUM(revenue)      AS revenue,
                SUM(gross_profit) AS gross_profit,
                ROUND(SUM(gross_profit)/SUM(revenue)*100,1) AS margin_pct
         FROM   fact_sales
+        {where}
         GROUP  BY location, period
         ORDER  BY period, location
     """
-    return pd.read_sql(sql, _con())
+    return pd.read_sql(sql, _con(), params=params)
+
+
+# ── sales rep ─────────────────────────────────────────────────────────────────
+
+def sales_by_rep(
+    date_from: str | None = None,
+    date_to: str | None = None,
+    location: str | None = None,
+    customer_type: str | None = None,
+    sort_by: str = "revenue",
+    n: int = 20,
+) -> pd.DataFrame:
+    """Sales performance by rep, optionally filtered by location, date range, or customer type."""
+    if sort_by not in _SORT_REPS:
+        sort_by = "revenue"
+    where, params = _build_where(date_from, date_to, location, customer_type)
+    sql = f"""
+        SELECT sales_rep, location,
+               SUM(revenue)      AS revenue,
+               SUM(gross_profit) AS gross_profit,
+               ROUND(SUM(gross_profit)/SUM(revenue)*100, 1) AS margin_pct,
+               COUNT(DISTINCT order_id)    AS orders,
+               COUNT(DISTINCT customer_id) AS customers
+        FROM   fact_sales
+        {where}
+        GROUP  BY sales_rep, location
+        ORDER  BY {sort_by} DESC
+        LIMIT  ?
+    """
+    return pd.read_sql(sql, _con(), params=params + [n])
 
 
 # ── inventory ────────────────────────────────────────────────────────────────

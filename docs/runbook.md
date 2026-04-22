@@ -104,6 +104,44 @@ Follow all six steps — skipping any one will break the AI routing or chart ren
    - Use the `db` fixture from `conftest.py`
    - Assert on known values, not just row counts
 
+7. **If the new KPI is a drill-down target:** also add `drill_key` and `drill_question`
+   to the *parent* chart's spec in `CHART_SPECS`. Example: a slice click on the category
+   pie chart resolves `"Show me the top products in {category}"` and posts it to `/ask`
+   as a normal question. See §6a below for the full pattern.
+
+---
+
+## 6a. Chart Drill-Down Pattern
+
+Drill-down is a templated follow-up question, not a separate code path. Every answer,
+whether typed or clicked, runs through the same tool-use loop.
+
+### How to make a chart drill-capable
+
+1. Write a KPI function that accepts the filter parameter (e.g. `top_products_by_category(category, n)`).
+2. Register the tool and dispatch entry as usual (§6 steps 2–4).
+3. On the *parent* chart spec in `CHART_SPECS`, add two keys:
+   ```python
+   "drill_key": "category",                                  # column in the parent DataFrame
+   "drill_question": "Show me the top products in {category}"  # template
+   ```
+4. The frontend (Next.js or Streamlit) reads these on click, substitutes the clicked value,
+   and posts the resolved question to the engine. No frontend logic changes.
+
+### Current drill-capable charts
+
+| Parent chart | Drill key | Drill target KPI |
+| --- | --- | --- |
+| `get_revenue_by_category` (pie) | `category` | `get_top_products_by_category` |
+| `get_customer_type_split` (pie) | `type` | `get_top_customers_by_type` |
+
+### Why this pattern
+
+One model of execution for every answer. Every result is produced by a tested KPI
+function called via tool use against the LLM. A clicked drill-down is just a question
+the user did not have to type. Frontend stays thin; new drill-down scenarios ship by
+adding backend code only.
+
 ---
 
 ## 7. Adding a New AI Provider

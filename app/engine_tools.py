@@ -38,12 +38,19 @@ with multiple yard locations. You help owners and managers understand their busi
 ALWAYS call a tool to retrieve data before responding — even if the same question was asked earlier
 in the conversation. Never skip the tool call or summarize from memory.
 
+Parameter rules:
+- Date filters: convert natural language to ISO dates. "Last 3 months" → date_from = 3 months ago, date_to = today. "Q1 2024" → date_from="2024-01-01", date_to="2024-03-31". "This year" → date_from="2025-01-01".
+- Threshold filters: when the user says "greater than $X" or "more than X orders" or "above X% margin", set min_revenue, min_orders, or min_margin_pct accordingly. These filter the results — do not post-filter in your response.
+- Location: match loosely — "Providence", "Yard A", "Boston location" all map to the correct enum value.
+- If a filter is not mentioned, omit the parameter entirely.
+
 Response format:
 - Lead with 1 sentence: the single most important finding, with a specific number.
 - Follow with 2–4 bullet points for supporting detail. Each bullet is one line — a name, a number, and why it matters.
-- Use **bold** for key figures and product/location names.
+- Use **bold** for key figures and customer/product/location names.
 - No headers. No paragraphs. No more than 4 bullets.
 - Format currency as $X.XK or $X.XM.
+- Always use customer names, not IDs, when displaying results.
 
 Example of good format:
 Engineered Wood is your top category at **$17.5M** revenue and a **38% margin**.
@@ -58,13 +65,50 @@ You are talking to a business owner. Be direct. Never fabricate numbers."""
 # Standard JSON Schema under "parameters" — no provider-specific keys.
 # Each engine adapter converts this to its own wire format.
 
+_FILTER_PARAMS = {
+    "date_from": {
+        "type": "string",
+        "description": (
+            "Start date filter (ISO format YYYY-MM-DD, inclusive). "
+            "Convert natural language: 'last quarter' → first day of last quarter, "
+            "'Q1 2024' → '2024-01-01', 'this year' → '2025-01-01', 'last month' → first day of last month."
+        ),
+    },
+    "date_to": {
+        "type": "string",
+        "description": (
+            "End date filter (ISO format YYYY-MM-DD, inclusive). "
+            "Convert natural language: 'last quarter' → last day of last quarter, "
+            "'Q1 2024' → '2024-03-31', 'this year' → today, 'last month' → last day of last month."
+        ),
+    },
+    "location": {
+        "type": "string",
+        "enum": ["Yard A - Providence", "Yard B - Boston", "Yard C - Hartford"],
+        "description": "Filter to a single yard location. Omit to include all locations.",
+    },
+    "customer_type": {
+        "type": "string",
+        "enum": ["Contractor", "Retail"],
+        "description": "Filter to a specific customer type. Omit to include both.",
+    },
+}
+
+_SORT_CUSTOMERS_PARAM = {
+    "sort_by": {
+        "type": "string",
+        "enum": ["revenue", "gross_profit", "orders"],
+        "description": "Metric to rank customers by. Default: revenue.",
+    },
+}
+
 TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "get_revenue_over_time",
         "description": (
             "Revenue, COGS, gross profit, margin, and order count over time. "
             "Use for questions about sales performance, revenue trends, financial overview, "
-            "or how the business is doing overall."
+            "or how the business is doing overall. Supports date range, location, and customer type filters."
         ),
         "parameters": {
             "type": "object",
@@ -74,6 +118,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "enum": ["day", "week", "month"],
                     "description": "Aggregation period. Default: month.",
                 },
+                **_FILTER_PARAMS,
             },
         },
     },
@@ -81,7 +126,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_margin_trend",
         "description": (
             "Gross margin percentage trend over time alongside revenue and gross profit. "
-            "Use for questions specifically about margin, profitability trends, or why profit changed."
+            "Use for questions specifically about margin, profitability trends, or why profit changed. "
+            "Supports date range, location, and customer type filters."
         ),
         "parameters": {
             "type": "object",
@@ -91,6 +137,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "enum": ["day", "week", "month"],
                     "description": "Aggregation period. Default: month.",
                 },
+                **_FILTER_PARAMS,
             },
         },
     },
@@ -99,7 +146,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Top N products ranked by revenue, gross profit, quantity sold, or margin percentage. "
             "Use for questions about best-performing products, top SKUs, highest margin products, "
-            "or what's selling most."
+            "or products above a revenue or margin threshold. "
+            "Supports date range, location, customer type, and minimum value filters."
         ),
         "parameters": {
             "type": "object",
@@ -113,6 +161,15 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "enum": ["revenue", "gross_profit", "quantity", "margin_pct"],
                     "description": "Sort metric. Default: revenue. Use margin_pct for highest margin products.",
                 },
+                **_FILTER_PARAMS,
+                "min_revenue": {
+                    "type": "number",
+                    "description": "Only include products with total revenue >= this value.",
+                },
+                "min_margin_pct": {
+                    "type": "number",
+                    "description": "Only include products with gross margin >= this percentage. E.g. 40 means 40%.",
+                },
             },
         },
     },
@@ -120,7 +177,8 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_bottom_margin_products",
         "description": (
             "Products with the lowest gross margin percentage (minimum $5K revenue). "
-            "Use for questions about worst-margin products, margin compression, or pricing issues."
+            "Use for questions about worst-margin products, margin compression, or pricing issues. "
+            "Supports date range, location, and customer type filters."
         ),
         "parameters": {
             "type": "object",
@@ -129,6 +187,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "integer",
                     "description": "Number of products to return. Default: 10.",
                 },
+                **_FILTER_PARAMS,
             },
         },
     },
@@ -136,15 +195,21 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_revenue_by_category",
         "description": (
             "Revenue, gross profit, and margin broken down by product category. "
-            "Use for questions about category performance or product mix."
+            "Use for questions about category performance or product mix. "
+            "Supports date range, location, and customer type filters."
         ),
-        "parameters": {"type": "object", "properties": {}},
+        "parameters": {
+            "type": "object",
+            "properties": {**_FILTER_PARAMS},
+        },
     },
     {
         "name": "get_top_customers",
         "description": (
-            "Top N customers ranked by revenue, with their type, gross profit, and order count. "
-            "Use for questions about best customers, key accounts, or customer value."
+            "Top N customers ranked by revenue, gross profit, or order count — with name, type and order history. "
+            "Use for questions about best customers, key accounts, customer value, "
+            "or customers exceeding a revenue or order threshold. "
+            "Supports date range, location, customer type, and minimum value filters."
         ),
         "parameters": {
             "type": "object",
@@ -153,6 +218,16 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "integer",
                     "description": "Number of customers to return. Default: 10.",
                 },
+                **_SORT_CUSTOMERS_PARAM,
+                **_FILTER_PARAMS,
+                "min_revenue": {
+                    "type": "number",
+                    "description": "Only include customers with total revenue >= this value. Use when user says 'greater than $X' or 'above $X'.",
+                },
+                "min_orders": {
+                    "type": "integer",
+                    "description": "Only include customers with at least this many orders.",
+                },
             },
         },
     },
@@ -160,23 +235,40 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "name": "get_customer_type_split",
         "description": (
             "Revenue, customer count, and order count split between Contractor and Retail customers. "
-            "Use for questions about customer mix or contractor vs. retail breakdown."
+            "Use for questions about customer mix or contractor vs. retail breakdown. "
+            "Supports date range and location filters."
         ),
-        "parameters": {"type": "object", "properties": {}},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "date_from": _FILTER_PARAMS["date_from"],
+                "date_to":   _FILTER_PARAMS["date_to"],
+                "location":  _FILTER_PARAMS["location"],
+            },
+        },
     },
     {
         "name": "get_repeat_customer_rate",
         "description": (
             "Repeat purchase rate by customer type — percentage of customers with more than one order. "
-            "Use for questions about customer loyalty, retention, or repeat business."
+            "Use for questions about customer loyalty, retention, or repeat business. "
+            "Supports date range and location filters."
         ),
-        "parameters": {"type": "object", "properties": {}},
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "date_from": _FILTER_PARAMS["date_from"],
+                "date_to":   _FILTER_PARAMS["date_to"],
+                "location":  _FILTER_PARAMS["location"],
+            },
+        },
     },
     {
         "name": "get_revenue_by_location",
         "description": (
             "Revenue, gross profit, and margin broken down by yard location over time. "
-            "Use for questions about location performance or comparing yards."
+            "Use for questions about location performance or comparing yards. "
+            "Supports date range and customer type filters."
         ),
         "parameters": {
             "type": "object",
@@ -186,6 +278,9 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "enum": ["month", "week", "total"],
                     "description": "Aggregation period. Default: month.",
                 },
+                "date_from":     _FILTER_PARAMS["date_from"],
+                "date_to":       _FILTER_PARAMS["date_to"],
+                "customer_type": _FILTER_PARAMS["customer_type"],
             },
         },
     },
@@ -212,7 +307,7 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         "description": (
             "Top products within a specific product category, ranked by revenue, with margin. "
             "Use when the user asks about products in a specific category like 'framing lumber' or "
-            "'fasteners', or drills down from a category view."
+            "'fasteners', or drills down from a category view. Supports date range and location filters."
         ),
         "parameters": {
             "type": "object",
@@ -225,6 +320,9 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "integer",
                     "description": "Number of products to return. Default: 10.",
                 },
+                "date_from": _FILTER_PARAMS["date_from"],
+                "date_to":   _FILTER_PARAMS["date_to"],
+                "location":  _FILTER_PARAMS["location"],
             },
             "required": ["category"],
         },
@@ -232,9 +330,9 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
     {
         "name": "get_top_customers_by_type",
         "description": (
-            "Top customers within a specific customer type (Contractor or Retail), ranked by revenue. "
+            "Top customers within a specific customer type (Contractor or Retail), ranked by chosen metric. "
             "Use when the user asks about contractor customers specifically, retail customers specifically, "
-            "or drills down from the customer type split."
+            "or drills down from the customer type split. Supports date range and location filters."
         ),
         "parameters": {
             "type": "object",
@@ -248,8 +346,69 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
                     "type": "integer",
                     "description": "Number of customers to return. Default: 10.",
                 },
+                **_SORT_CUSTOMERS_PARAM,
+                "date_from":   _FILTER_PARAMS["date_from"],
+                "date_to":     _FILTER_PARAMS["date_to"],
+                "location":    _FILTER_PARAMS["location"],
+                "min_revenue": {
+                    "type": "number",
+                    "description": "Only include customers with total revenue >= this value.",
+                },
             },
             "required": ["customer_type"],
+        },
+    },
+    {
+        "name": "get_sales_by_rep",
+        "description": (
+            "Sales performance by sales rep: revenue, gross profit, margin, order count, and customer count. "
+            "Use for questions about rep performance, which rep drives the most sales, "
+            "rep productivity, or comparing reps across locations. "
+            "Supports date range, location, customer type, and sort order filters."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "n": {
+                    "type": "integer",
+                    "description": "Number of reps to return. Default: 20 (all reps).",
+                },
+                "sort_by": {
+                    "type": "string",
+                    "enum": ["revenue", "gross_profit", "orders"],
+                    "description": "Metric to rank reps by. Default: revenue.",
+                },
+                **_FILTER_PARAMS,
+            },
+        },
+    },
+    {
+        "name": "get_inactive_customers",
+        "description": (
+            "Customers who had 2+ orders historically but have not placed any order in the most recent period. "
+            "Use for questions about churned customers, at-risk accounts, customers going quiet, "
+            "or 'which customers haven't bought recently'. "
+            "Supports location and customer type filters."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "enum": ["month", "quarter", "year"],
+                    "description": "Lookback window — customers missing from this period are flagged. Default: quarter.",
+                },
+                "n": {
+                    "type": "integer",
+                    "description": "Number of customers to return. Default: 20.",
+                },
+                "location":             _FILTER_PARAMS["location"],
+                "customer_type":        _FILTER_PARAMS["customer_type"],
+                "min_lifetime_revenue": {
+                    "type": "number",
+                    "description": "Only show inactive customers whose lifetime revenue is >= this value. Use when user says 'high-value customers who went quiet' or 'above $X'.",
+                },
+            },
         },
     },
 ]
@@ -289,10 +448,10 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
     },
     "get_top_customers": {
         "type": "horizontal_bar",
-        "x": "revenue", "y": "customer_id",
+        "x": "revenue", "y": "customer_name",
         "color_col": "type",
         "color_map": {"Contractor": "#2563EB", "Retail": "#F59E0B"},
-        "labels": {"customer_id": "", "revenue": "Revenue ($)"},
+        "labels": {"customer_name": "", "revenue": "Revenue ($)"},
     },
     "get_customer_type_split": {
         "type": "pie",
@@ -335,8 +494,27 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
     },
     "get_top_customers_by_type": {
         "type": "horizontal_bar",
-        "x": "revenue", "y": "customer_id",
-        "labels": {"customer_id": "", "revenue": "Revenue ($)"},
+        "x": "revenue", "y": "customer_name",
+        "labels": {"customer_name": "", "revenue": "Revenue ($)"},
+    },
+    "get_sales_by_rep": {
+        "type": "horizontal_bar",
+        "x": "revenue", "y": "sales_rep",
+        "color_col": "location",
+        "labels": {"sales_rep": "", "revenue": "Revenue ($)", "margin_pct": "Margin %"},
+    },
+    "get_inactive_customers": {
+        "type": "table",
+        "columns": ["customer_id", "type", "location", "last_order_date",
+                    "lifetime_revenue", "total_orders"],
+        "labels": {
+            "customer_id":      "Customer",
+            "type":             "Type",
+            "location":         "Location",
+            "last_order_date":  "Last Order",
+            "lifetime_revenue": "Lifetime Revenue ($)",
+            "total_orders":     "Total Orders",
+        },
     },
 }
 
@@ -353,9 +531,11 @@ KPI_DISPATCH: dict[str, Any] = {
     "get_repeat_customer_rate":   kpis.repeat_customer_rate,
     "get_revenue_by_location":    kpis.revenue_by_location,
     "get_inventory_health":       kpis.inventory_health,
-    "get_slow_moving_inventory":       kpis.slow_moving_inventory,
-    "get_top_products_by_category":    kpis.top_products_by_category,
-    "get_top_customers_by_type":       kpis.top_customers_by_type,
+    "get_slow_moving_inventory":  kpis.slow_moving_inventory,
+    "get_top_products_by_category": kpis.top_products_by_category,
+    "get_top_customers_by_type":    kpis.top_customers_by_type,
+    "get_sales_by_rep":             kpis.sales_by_rep,
+    "get_inactive_customers":       kpis.inactive_customers,
 }
 
 # ── curated follow-up suggestions (keyed by tool name) ───────────────────────
@@ -427,6 +607,16 @@ FOLLOW_UP_SUGGESTIONS: dict[str, list[tuple[str, str]]] = {
         ("👷 Customer mix",        "What is the split between contractor and retail revenue?"),
         ("👷 All top customers",   "Who are our top customers by revenue?"),
         ("🔄 Repeat rate",         "What is our repeat customer rate?"),
+    ],
+    "get_sales_by_rep": [
+        ("🏪 By location",         "Which location drives the most revenue?"),
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
+        ("📈 Revenue trend",       "How has overall revenue trended over time?"),
+    ],
+    "get_inactive_customers": [
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
+        ("🔄 Repeat rate",         "What is our repeat customer rate?"),
+        ("📈 Revenue trend",       "How has overall revenue trended over time?"),
     ],
 }
 

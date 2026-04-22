@@ -59,7 +59,8 @@ and lets owners and managers ask business questions in plain English.
                     │  top_products       │
                     │  top_customers      │
                     │  inventory_health   │
-                    │  + 6 more           │
+                    │  + 8 more (incl.    │
+                    │  drill-down KPIs)   │
                     └──────────┬──────────┘
                                │
           ┌────────────────────┼────────────────────┐
@@ -151,13 +152,35 @@ User question (natural language) → Streamlit chat input
 
 ```text
 Browser → POST /api/lumber/ask (Vercel proxy, Next.js route)
-  → POST /ask (FastAPI backend, Railway/Render)
+  → POST /ask (FastAPI backend, Render)
   → engine.ask(question, history)      [same engine as Streamlit path]
   → ChatResult serialized to JSON
       { text, follow_ups, chart_spec, chart_data, kpi_called }
   → Vercel returns JSON to browser
   → Next.js chat page renders text + data table + follow-up chips
 ```text
+
+### 3.5 Chart drill-down (scoped follow-up pattern)
+
+Drill-down is not a new code path. It is a templated follow-up question that rides the
+existing chat pipeline. This keeps the system to one model of execution: every answer, whether
+typed or clicked, is produced by the same tool-use loop against the same tested KPI functions.
+
+```text
+User clicks a pie-chart slice (e.g. "Treated Lumber" in the category chart)
+  → Frontend reads chart_spec.drill_key and chart_spec.drill_question from the last ChatResult
+  → Substitutes the clicked value into the template:
+      "Show me the top products in {category}"  →  "Show me the top products in Treated Lumber"
+  → Posts the resolved question to /ask as a normal chat turn
+  → Engine selects get_top_products_by_category, passing category="Treated Lumber"
+  → Response renders as any other answer: text + table + follow-up chips
+```
+
+Only charts whose `CHART_SPECS` entry includes `drill_key` and `drill_question` are
+drill-capable. Today that is `get_revenue_by_category` (drills into
+`top_products_by_category`) and `get_customer_type_split` (drills into
+`top_customers_by_type`). Adding drill-down to a new chart means writing a new KPI
+function, registering a `drill_question` template, and shipping — no frontend logic changes.
 
 ---
 
@@ -167,7 +190,7 @@ Browser → POST /api/lumber/ask (Vercel proxy, Next.js route)
 | --- | --- |
 | `etl/generate_data.py` | Synthetic data generation — 15 months, 200 customers, 20 SKUs |
 | `etl/loader.py` | ETL: CSV → transform → SQLite |
-| `metrics/kpis.py` | All business logic — 11 KPI functions, no raw SQL in app layer |
+| `metrics/kpis.py` | All business logic: 13 KPI functions, no raw SQL in app layer. Two are drill-down KPIs (`top_products_by_category`, `top_customers_by_type`) invoked when the user clicks a pie-chart slice. |
 | `app/engine_tools.py` | Provider-agnostic shared state: tool defs, chart specs, ChatResult |
 | `app/engine_factory.py` | `build_engine()` — reads `AI_PROVIDER`, returns the right engine |
 | `app/anthropic_engine.py` | Two-turn Anthropic tool-use flow |

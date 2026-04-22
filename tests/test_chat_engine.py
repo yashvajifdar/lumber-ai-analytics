@@ -311,6 +311,7 @@ class TestChartBuilder:
         }),
         "get_top_customers": pd.DataFrame({
             "customer_id": ["C001", "C002"],
+            "customer_name": ["ProBuild LLC", "John Smith"],
             "type": ["Contractor", "Retail"],
             "revenue": [8000.0, 2000.0],
             "gross_profit": [3200.0, 600.0],
@@ -350,6 +351,38 @@ class TestChartBuilder:
             "total_stock": [200],
             "units_sold_90d": [0],
             "inventory_value": [2400.0],
+        }),
+        "get_top_products_by_category": pd.DataFrame({
+            "name": ["2x4x8 Lumber", "2x6x8 Lumber"],
+            "category": ["Dimensional Lumber", "Dimensional Lumber"],
+            "revenue": [5000.0, 3000.0],
+            "gross_profit": [2000.0, 900.0],
+            "margin_pct": [40.0, 30.0],
+        }),
+        "get_top_customers_by_type": pd.DataFrame({
+            "customer_id": ["C001", "C003"],
+            "customer_name": ["ProBuild LLC", "SunriseDev Inc"],
+            "type": ["Contractor", "Contractor"],
+            "revenue": [8000.0, 4000.0],
+            "gross_profit": [3200.0, 1600.0],
+            "orders": [10, 5],
+        }),
+        "get_sales_by_rep": pd.DataFrame({
+            "sales_rep": ["Mike Torres", "Sarah Chen"],
+            "location": ["Yard A - Providence", "Yard A - Providence"],
+            "revenue": [12000.0, 9000.0],
+            "gross_profit": [4800.0, 3600.0],
+            "margin_pct": [40.0, 40.0],
+            "orders": [15, 12],
+            "customers": [8, 6],
+        }),
+        "get_inactive_customers": pd.DataFrame({
+            "customer_id": ["C010", "C020"],
+            "type": ["Contractor", "Retail"],
+            "location": ["Yard A - Providence", "Yard B - Boston"],
+            "last_order_date": ["2024-06-01", "2024-05-15"],
+            "lifetime_revenue": [5000.0, 1200.0],
+            "total_orders": [4, 2],
         }),
     }
 

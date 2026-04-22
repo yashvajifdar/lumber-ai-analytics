@@ -66,6 +66,12 @@ LAST  = ["Smith","Johnson","Williams","Brown","Jones","Garcia","Miller","Davis",
 COMPANIES = ["BuildRight","ProCraft","SunriseDev","AceContracting","BlueSky Build",
              "Cornerstone","Summit Build","DuraBuild","First Choice","AllStar"]
 
+SALES_REPS = {
+    "Yard A - Providence": ["Mike Torres", "Sarah Chen", "Jake Nolan"],
+    "Yard B - Boston":     ["Amanda Price", "Luis Vega", "Tom Kelley"],
+    "Yard C - Hartford":   ["Dana Brooks", "Chris Reed", "Mia Santos"],
+}
+
 
 def generate(output_dir: str = OUTPUT_DIR) -> None:
     """Generate all raw CSV files. Safe to call programmatically."""
@@ -137,6 +143,7 @@ def generate(output_dir: str = OUTPUT_DIR) -> None:
                 "order_date": d.isoformat(),
                 "location": location,
                 "status": random.choices(["completed","completed","completed","returned"], weights=[9,9,9,1])[0],
+                "sales_rep": random.choice(SALES_REPS[location]),
             })
 
             n_items = random.randint(1, 5) if ctype == "Retail" else random.randint(2, 10)
@@ -160,7 +167,7 @@ def generate(output_dir: str = OUTPUT_DIR) -> None:
             order_id += 1
 
     with open(f"{output_dir}/orders.csv", "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["order_id","customer_id","order_date","location","status"])
+        w = csv.DictWriter(f, fieldnames=["order_id","customer_id","order_date","location","status","sales_rep"])
         w.writeheader(); w.writerows(orders)
     print(f"orders.csv     →  {len(orders)} rows")
 
