@@ -72,7 +72,7 @@ python -m pytest tests/ -q
 Tests use an in-memory SQLite DB with deterministic data — no `.env` required,
 no production DB touched, no real API calls made.
 
-**Expected:** 119 tests, 0 failures.
+**Expected:** 145 tests, 0 failures.
 
 ---
 

@@ -107,13 +107,13 @@ embedded in the personal brand site with consistent design.
 
 ### M0 — Foundation (complete)
 
-- [x] Synthetic data generator (15 months, 200 customers, 20 SKUs)
-- [x] ETL pipeline: CSV → transform → SQLite
-- [x] 13 trusted KPI functions in `metrics/kpis.py`
+- [x] Synthetic data generator (15 months, 200 customers, 20 SKUs, 9 sales reps)
+- [x] ETL pipeline: CSV → transform → SQLite (customer_name flows through to fact_sales)
+- [x] 15 trusted KPI functions in `metrics/kpis.py`
 - [x] Streamlit chat app (suggestion cards, follow-up chips, chart rendering)
 - [x] AI chat with Anthropic tool use (two-turn flow)
 - [x] Google Gemini provider (same interface, one-line switch)
-- [x] Test suite: 119 tests, 100% passing
+- [x] Test suite: 145 tests, 100% passing
 - [x] Architecture and design documentation
 
 ### M1 — Demo-ready (complete)
@@ -129,11 +129,10 @@ embedded in the personal brand site with consistent design.
 - [x] Drill-down: category → products, customer type → customers
 - [x] ADRs: 0001 (Render), 0002 (drill-down), 0003 (tool use over SQL generation)
 - [ ] Record 3-minute demo video (walk through chat with real questions)
-- [ ] Add Streamlit Cloud deploy (secondary demo path)
 
 ### M2 — Pilot engagement (target: Q2 2026)
 
-*Client: Finetco (Ryan Finnegan) — 4-location building supply, New England/NY.*
+*Client: Finetco (Bill + Ryan Finnegan) — 4-location building supply, New England/NY.*
 *Next call scheduled. They are on Epicor BisTrack.*
 
 **Go-to-market partnership (confirmed in second meeting):**
@@ -144,32 +143,45 @@ Finetco is not just a paying client, they are a distribution partner and a refer
 Pricing and deal structure must reflect both the build contribution and the referral pipeline.
 Nail the experience for them, and the funnel to 100s of similar businesses opens.
 
+**Bill's top questions (received via email — map to KPI backlog):**
+
+Analytics AI can answer today (synthetic data):
+- Sales by location, by sales rep → `sales_by_rep` ✓ built
+- Customers with less/no sales last period → `inactive_customers` ✓ built
+- Top customers filtered by revenue threshold → `top_customers(min_revenue=X)` ✓ built
+
+Needs real BisTrack schema before building (data not in synthetic model):
+- Customer invoices by date paid, GM, net after discount/CC fee → needs AR/payment table
+- Orders delivered by truck/driver, miles, duration → needs delivery table
+- Picked by — SKUs and qty by person → needs picking log table
+- Picking errors by person → needs error log table
+- Time a ticket stays in each status → needs status change log
+- By-location summary (orders, picks, deliveries, errors, cycle counts) → needs above tables
+
+Automation (separate product surface — parking lot):
+- AP automation, check processing, PO acknowledgment, quote entry, kitchen entry, take-off
+
 **Before next meeting — demo goals:**
-- [ ] Demo: access control — show how data is restricted per client; one client cannot
-      see another's data; credentials never touch the UI or logs
-- [ ] Demo: filter parameters — date range, location, customer type, product category
-      on live queries (even with synthetic data, show the UI controls working)
-- [ ] Demo: group by and sort by — "top 10 contractors by revenue, sorted by margin"
-      style queries; show the AI routing to the right KPI with the right parameters
+- [ ] Demo: filter parameters working in chat — show date range, location, rep, threshold queries
+- [ ] Demo: `sales_by_rep` and `inactive_customers` live on website
 - [ ] Prepare question list for next call: schema (tables, row counts, ERD), expected
       query volume, user count, BisTrack Epicor rep contact, their top 10 business questions
-- [ ] Draft compute/API cost estimate sheet — variable cost scales with query volume;
-      client owns API credentials; ballpark $10–500/month LLM cost depending on usage
+- [ ] Draft compute/API cost estimate sheet
 - [ ] Draft partnership/commercial structure options (see M3 commercial section)
 
-**Query expressiveness (build before next demo):**
-- [ ] Add filter parameters to existing KPI tools: `date_from`, `date_to`, `location`,
-      `customer_type`, `product_category` as optional params on all relevant functions
-- [ ] New KPI: `customer_cross_sell_gap(product_has, product_missing)` —
-      "customers who bought X but not Y"
-- [ ] Group-by and sort-by parameters on top-N functions
-- [ ] ADR for filter parameter approach (extend KPI functions vs. other patterns)
+**Query expressiveness (complete):**
+- [x] Filter parameters on all KPI tools: `date_from`, `date_to`, `location`, `customer_type`
+- [x] Threshold filters: `min_revenue`, `min_orders`, `min_margin_pct`, `min_lifetime_revenue`
+- [x] `sort_by` on top_customers, top_customers_by_type, sales_by_rep
+- [x] New KPI: `sales_by_rep(location, date_from, date_to, customer_type, sort_by)`
+- [x] New KPI: `inactive_customers(period, location, customer_type, min_lifetime_revenue)`
+- [x] Customer names displayed in all customer KPIs and charts (not IDs)
+- [ ] New KPI: `customer_cross_sell_gap(product_has, product_missing)` — "customers who bought X but not Y"
 
-**Connector layer:**
-- [ ] `DataSource` abstraction — interface that BisTrack, CSV, and QuickBooks all implement
-- [ ] BisTrack connector — REST + Smart View endpoints; credentials via env vars;
-      Epicor rep required to activate (client initiates)
-- [ ] CSV upload flow — no integration required, works from their export files
+**Connector layer (blocked on BisTrack access details):**
+- [ ] Research BisTrack API vs SQL Server direct access vs Smart Views — waiting for Finetco access info
+- [ ] `DataSource` abstraction — design once connection method is confirmed
+- [ ] CSV upload flow — works from their export files, no ERP integration needed
 - [ ] ETL validation: row count checks, schema drift detection, alert on anomalies
 
 **Onboarding:**
