@@ -475,10 +475,12 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
         "type": "table",
         "columns": ["name", "category", "location",
                     "stock_level", "reorder_point", "below_reorder", "inventory_value"],
+        "quantity_cols": ["stock_level", "reorder_point", "below_reorder"],
     },
     "get_slow_moving_inventory": {
         "type": "table",
         "columns": ["name", "category", "total_stock", "units_sold_90d", "inventory_value"],
+        "quantity_cols": ["total_stock", "units_sold_90d"],
         "labels": {
             "name": "Product",
             "category": "Category",
@@ -505,10 +507,11 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
     },
     "get_inactive_customers": {
         "type": "table",
-        "columns": ["customer_id", "type", "location", "last_order_date",
+        "columns": ["customer_name", "type", "location", "last_order_date",
                     "lifetime_revenue", "total_orders"],
+        "quantity_cols": ["total_orders"],
         "labels": {
-            "customer_id":      "Customer",
+            "customer_name":    "Customer",
             "type":             "Type",
             "location":         "Location",
             "last_order_date":  "Last Order",
