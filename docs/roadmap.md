@@ -113,7 +113,7 @@ embedded in the personal brand site with consistent design.
 - [x] Streamlit chat app (suggestion cards, follow-up chips, chart rendering)
 - [x] AI chat with Anthropic tool use (two-turn flow)
 - [x] Google Gemini provider (same interface, one-line switch)
-- [x] Test suite: 145 tests, 100% passing
+- [x] Test suite: 157 tests, 100% passing
 - [x] Architecture and design documentation
 
 ### M1 — Demo-ready (complete)
@@ -176,7 +176,7 @@ Automation (separate product surface — parking lot):
 - [x] New KPI: `sales_by_rep(location, date_from, date_to, customer_type, sort_by)`
 - [x] New KPI: `inactive_customers(period, location, customer_type, min_lifetime_revenue)`
 - [x] Customer names displayed in all customer KPIs and charts (not IDs)
-- [ ] New KPI: `customer_cross_sell_gap(product_has, product_missing)` — "customers who bought X but not Y"
+- [x] New KPI: `customer_cross_sell_gap(product_has, product_missing)` — "customers who bought X but not Y"
 
 **Connector layer (blocked on BisTrack access details):**
 - [ ] Research BisTrack API vs SQL Server direct access vs Smart Views — waiting for Finetco access info

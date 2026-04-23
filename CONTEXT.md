@@ -12,7 +12,7 @@ A consulting demo and portfolio piece: an end-to-end analytics platform for
 lumber / building supply businesses. Demonstrates:
 
 - Data engineering: synthetic data generation, ETL pipeline, SQLite warehouse
-- Analytics: 11 trusted KPI functions, metrics layer
+- Analytics: 15 trusted KPI functions, metrics layer
 - AI: natural language querying routed to analytics functions via Anthropic tool use
 - Product: Streamlit chat UI (local) + Next.js chat page at yashvajifdar.com/demos/lumber
 
@@ -29,7 +29,7 @@ etl/
   loader.py           ← ETL: CSV → transform → SQLite
 
 metrics/
-  kpis.py             ← all business logic (11 KPI functions, no raw SQL in app layer)
+  kpis.py             ← all business logic (15 KPI functions, no raw SQL in app layer)
 
 app/
   main.py             ← Streamlit: chat-only UI
@@ -71,17 +71,22 @@ Core tables in `lumber.db`:
 
 In `metrics/kpis.py`:
 
-1. `revenue_over_time(period)` — day/week/month
-2. `margin_trend(period)`
-3. `top_products(n, by)`
-4. `bottom_margin_products(n)`
-5. `revenue_by_category()`
-6. `top_customers(n)`
-7. `customer_type_split()`
-8. `repeat_customer_rate()`
-9. `revenue_by_location(period)`
-10. `inventory_health()`
-11. `slow_moving_inventory()`
+1. `revenue_over_time(period, date_from, date_to, location, customer_type)`
+2. `margin_trend(period, date_from, date_to, location, customer_type)`
+3. `top_products(n, by, date_from, date_to, location, customer_type)`
+4. `bottom_margin_products(n, date_from, date_to, location, customer_type)`
+5. `revenue_by_category(date_from, date_to, location, customer_type)`
+6. `top_products_by_category(category, n, date_from, date_to, location, customer_type)` — drill-down from category pie
+7. `top_customers(n, sort_by, date_from, date_to, location, customer_type, min_revenue, min_orders)`
+8. `customer_type_split(date_from, date_to, location)`
+9. `top_customers_by_type(customer_type, n, sort_by, date_from, date_to, location, min_revenue)`
+10. `repeat_customer_rate(date_from, date_to, location, customer_type)`
+11. `revenue_by_location(period, date_from, date_to, customer_type)`
+12. `inventory_health()`
+13. `slow_moving_inventory(n)`
+14. `sales_by_rep(location, date_from, date_to, customer_type, sort_by)`
+15. `inactive_customers(period, location, customer_type, min_lifetime_revenue, n)`
+16. `customer_cross_sell_gap(product_has, product_missing, customer_type, location, n)`
 
 ---
 
@@ -89,15 +94,21 @@ In `metrics/kpis.py`:
 
 - [x] Data generator
 - [x] ETL loader
-- [x] 11 KPI functions
+- [x] 16 KPI functions (with full filter params: date_from/to, location, customer_type, thresholds)
+- [x] 9 sales reps in synthetic data; `sales_rep` flows through ETL to fact_sales
+- [x] Customer names in all customer KPI outputs and charts
 - [x] Streamlit chat app (suggestion cards, follow-up chips)
 - [x] Anthropic tool-use engine + Gemini engine (same interface)
-- [x] Tests — 119 tests passing
+- [x] Tests — 157 tests passing
 - [x] README
 - [x] FastAPI backend — `app/api.py`
+- [x] FastAPI deployed to Render (free tier, auto-sleeps)
 - [x] Personal website integration — yashvajifdar.com/demos/lumber
+- [x] Chart rendering (Recharts: bar, line, pie, horizontal bar)
+- [x] Drill-down: category → products, customer type → customers
+- [x] ADRs: 0001 (Render), 0002 (drill-down), 0003 (tool use over SQL generation)
 - [x] Docs — architecture.md, roadmap.md, runbook.md
-- [ ] Deploy FastAPI to Railway
+- [ ] Demo video
 - [ ] Demo video
 
 ---
