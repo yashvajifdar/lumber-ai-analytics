@@ -383,6 +383,38 @@ TOOL_DEFINITIONS: list[dict[str, Any]] = [
         },
     },
     {
+        "name": "get_customer_cross_sell_gap",
+        "description": (
+            "Customers who bought one product or category but have never bought another. "
+            "Use for questions like 'customers who bought framing lumber but not treated lumber', "
+            "'contractors who buy plywood but never fasteners', or any cross-sell opportunity. "
+            "Matches product_has and product_missing against product names and categories "
+            "using partial match — 'framing' matches '2x4x8 Framing Lumber' and 'Dimensional Lumber'. "
+            "Returns customers sorted by how much they spent on product_has. "
+            "Supports location and customer type filters."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "product_has": {
+                    "type": "string",
+                    "description": "Product name or category the customer HAS bought. Partial match, case-insensitive.",
+                },
+                "product_missing": {
+                    "type": "string",
+                    "description": "Product name or category the customer has NOT bought. Partial match, case-insensitive.",
+                },
+                "n": {
+                    "type": "integer",
+                    "description": "Number of customers to return. Default: 20.",
+                },
+                "location":      _FILTER_PARAMS["location"],
+                "customer_type": _FILTER_PARAMS["customer_type"],
+            },
+            "required": ["product_has", "product_missing"],
+        },
+    },
+    {
         "name": "get_inactive_customers",
         "description": (
             "Customers who had 2+ orders historically but have not placed any order in the most recent period. "
@@ -505,6 +537,13 @@ CHART_SPECS: dict[str, dict[str, Any]] = {
         "color_col": "location",
         "labels": {"sales_rep": "", "revenue": "Revenue ($)", "margin_pct": "Margin %"},
     },
+    "get_customer_cross_sell_gap": {
+        "type": "horizontal_bar",
+        "x": "revenue_on_has", "y": "customer_name",
+        "color_col": "type",
+        "color_map": {"Contractor": "#2563EB", "Retail": "#F59E0B"},
+        "labels": {"customer_name": "", "revenue_on_has": "Revenue on Product A ($)"},
+    },
     "get_inactive_customers": {
         "type": "table",
         "columns": ["customer_name", "type", "location", "last_order_date",
@@ -538,6 +577,7 @@ KPI_DISPATCH: dict[str, Any] = {
     "get_top_products_by_category": kpis.top_products_by_category,
     "get_top_customers_by_type":    kpis.top_customers_by_type,
     "get_sales_by_rep":             kpis.sales_by_rep,
+    "get_customer_cross_sell_gap":  kpis.customer_cross_sell_gap,
     "get_inactive_customers":       kpis.inactive_customers,
 }
 
@@ -615,6 +655,11 @@ FOLLOW_UP_SUGGESTIONS: dict[str, list[tuple[str, str]]] = {
         ("🏪 By location",         "Which location drives the most revenue?"),
         ("👷 Top customers",       "Who are our top customers by revenue?"),
         ("📈 Revenue trend",       "How has overall revenue trended over time?"),
+    ],
+    "get_customer_cross_sell_gap": [
+        ("👷 Top customers",       "Who are our top customers by revenue?"),
+        ("🐌 Inactive accounts",   "Which customers haven't ordered recently?"),
+        ("🗂️ By category",         "What does revenue by category look like?"),
     ],
     "get_inactive_customers": [
         ("👷 Top customers",       "Who are our top customers by revenue?"),

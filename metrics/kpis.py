@@ -365,6 +365,67 @@ def inactive_customers(
     return pd.read_sql(sql, _con(), params=outer_params + having_params + [n])
 
 
+# ── cross-sell ───────────────────────────────────────────────────────────────
+
+def customer_cross_sell_gap(
+    product_has: str,
+    product_missing: str,
+    customer_type: str | None = None,
+    location: str | None = None,
+    n: int = 20,
+) -> pd.DataFrame:
+    """Customers who bought product_has but never bought product_missing.
+
+    Matches against both product name and category using case-insensitive partial
+    match — 'framing' matches '2x4x8 Framing Lumber', 'Dimensional Lumber', etc.
+    """
+    extra_clauses: list[str] = []
+    extra_params: list = []
+    if location:
+        extra_clauses.append("f.location = ?")
+        extra_params.append(location)
+    if customer_type:
+        extra_clauses.append("f.type = ?")
+        extra_params.append(customer_type)
+    extra_where = ("AND " + " AND ".join(extra_clauses)) if extra_clauses else ""
+
+    sql = f"""
+        SELECT
+            f.customer_id,
+            f.customer_name,
+            f.type,
+            f.location,
+            ROUND(SUM(CASE WHEN LOWER(f.name)     LIKE LOWER('%' || ? || '%')
+                               OR LOWER(f.category) LIKE LOWER('%' || ? || '%')
+                          THEN f.revenue ELSE 0 END), 2) AS revenue_on_has,
+            COUNT(DISTINCT f.order_id)  AS total_orders,
+            ROUND(SUM(f.revenue), 2)    AS lifetime_revenue
+        FROM   fact_sales f
+        WHERE  f.customer_id IN (
+            SELECT DISTINCT customer_id FROM fact_sales
+            WHERE  LOWER(name)     LIKE LOWER('%' || ? || '%')
+               OR  LOWER(category) LIKE LOWER('%' || ? || '%')
+        )
+        AND    f.customer_id NOT IN (
+            SELECT DISTINCT customer_id FROM fact_sales
+            WHERE  LOWER(name)     LIKE LOWER('%' || ? || '%')
+               OR  LOWER(category) LIKE LOWER('%' || ? || '%')
+        )
+        {extra_where}
+        GROUP  BY f.customer_id, f.customer_name, f.type, f.location
+        ORDER  BY revenue_on_has DESC
+        LIMIT  ?
+    """
+    params = [
+        product_has, product_has,           # CASE WHEN revenue_on_has
+        product_has, product_has,           # IN subquery
+        product_missing, product_missing,   # NOT IN subquery
+        *extra_params,
+        n,
+    ]
+    return pd.read_sql(sql, _con(), params=params)
+
+
 # ── location ─────────────────────────────────────────────────────────────────
 
 def revenue_by_location(

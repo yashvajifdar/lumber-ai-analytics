@@ -376,8 +376,17 @@ class TestChartBuilder:
             "orders": [15, 12],
             "customers": [8, 6],
         }),
+        "get_customer_cross_sell_gap": pd.DataFrame({
+            "customer_id": ["C001", "C002"],
+            "customer_name": ["ProBuild LLC", "John Smith"],
+            "type": ["Contractor", "Retail"],
+            "location": ["Yard A - Providence", "Yard B - Boston"],
+            "revenue_on_has": [5000.0, 1200.0],
+            "total_orders": [10, 3],
+            "lifetime_revenue": [8000.0, 1500.0],
+        }),
         "get_inactive_customers": pd.DataFrame({
-            "customer_id": ["C010", "C020"],
+            "customer_name": ["ProBuild LLC", "John Smith"],
             "type": ["Contractor", "Retail"],
             "location": ["Yard A - Providence", "Yard B - Boston"],
             "last_order_date": ["2024-06-01", "2024-05-15"],

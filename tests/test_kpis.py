@@ -481,3 +481,68 @@ class TestInactiveCustomers:
         if len(result) > 1:
             dates = result["last_order_date"].tolist()
             assert dates == sorted(dates)
+
+
+# ── customer_cross_sell_gap ───────────────────────────────────────────────────
+
+class TestCustomerCrossSellGap:
+    def test_returns_dataframe(self, test_db):
+        assert isinstance(
+            kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods"),
+            pd.DataFrame,
+        )
+
+    def test_has_required_columns(self, test_db):
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        for col in ("customer_id", "customer_name", "type", "location",
+                    "revenue_on_has", "total_orders", "lifetime_revenue"):
+            assert col in result.columns, f"Missing column: {col}"
+
+    def test_excludes_customer_who_bought_both(self, test_db):
+        # C001 bought Dimensional Lumber AND Sheet Goods → must not appear
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        assert "C001" not in result["customer_id"].values
+
+    def test_includes_customers_missing_product(self, test_db):
+        # C002 and C003 bought Dimensional Lumber but never Sheet Goods → must appear
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        assert "C002" in result["customer_id"].values
+        assert "C003" in result["customer_id"].values
+
+    def test_customer_names_present(self, test_db):
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        assert "John Smith" in result["customer_name"].values
+        assert "SunriseDev Inc" in result["customer_name"].values
+
+    def test_sorted_by_revenue_on_has_descending(self, test_db):
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        revs = result["revenue_on_has"].tolist()
+        assert revs == sorted(revs, reverse=True)
+
+    def test_c003_revenue_on_has(self, test_db):
+        # C003 Dimensional Lumber revenue: O006 (69.90) + O007 (34.95) = 104.85
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods")
+        c003 = result[result["customer_id"] == "C003"]
+        assert c003.iloc[0]["revenue_on_has"] == pytest.approx(104.85, abs=0.01)
+
+    def test_partial_name_match(self, test_db):
+        # "Lumber" should match "Dimensional Lumber" category
+        result = kpis.customer_cross_sell_gap("Lumber", "Sheet Goods")
+        assert "C002" in result["customer_id"].values
+
+    def test_no_results_when_all_bought_both(self, test_db):
+        # "Sheet Goods" but not "Decking" — only C001 has Sheet Goods and they also have Decking
+        result = kpis.customer_cross_sell_gap("Sheet Goods", "Decking")
+        assert len(result) == 0
+
+    def test_customer_type_filter(self, test_db):
+        # Filter to Retail — C002 (Retail) in, C003 (Contractor) out
+        result = kpis.customer_cross_sell_gap(
+            "Dimensional Lumber", "Sheet Goods", customer_type="Retail"
+        )
+        assert "C002" in result["customer_id"].values
+        assert "C003" not in result["customer_id"].values
+
+    def test_n_limits_results(self, test_db):
+        result = kpis.customer_cross_sell_gap("Dimensional Lumber", "Sheet Goods", n=1)
+        assert len(result) == 1
